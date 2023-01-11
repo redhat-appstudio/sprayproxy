@@ -14,7 +14,7 @@ import (
 )
 
 func TestHandleProxy(t *testing.T) {
-	proxy, err := NewSprayProxy()
+	proxy, err := NewSprayProxy(false)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}

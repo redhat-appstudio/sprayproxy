@@ -21,7 +21,7 @@ Use the --backend flag to specify which servers to forward traffic to:
 sprayproxy server --backend http://localhost:8081 --backend http://localhost:8082
 	`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		server, err := server.NewServer(host, port, backends...)
+		server, err := server.NewServer(host, port, insecureSkipTLSVerify, backends...)
 		if err != nil {
 			return err
 		}
@@ -30,9 +30,10 @@ sprayproxy server --backend http://localhost:8081 --backend http://localhost:808
 }
 
 var (
-	host     string
-	port     int
-	backends []string
+	host                  string
+	port                  int
+	backends              []string
+	insecureSkipTLSVerify bool
 )
 
 func init() {
@@ -50,5 +51,5 @@ func init() {
 	serverCmd.Flags().StringVar(&host, "host", "localhost", "Host for running the server. Defaults to localhost")
 	serverCmd.Flags().IntVar(&port, "port", 8080, "Port for running the server. Defaults to 8080")
 	serverCmd.Flags().StringSliceVar(&backends, "backend", []string{}, "Backend to forward requests. Use more than once.")
-
+	serverCmd.Flags().BoolVar(&insecureSkipTLSVerify, "insecure-skip-tls-verify", false, "Skip TLS verification on all backends. INSECURE - do not use in production.")
 }

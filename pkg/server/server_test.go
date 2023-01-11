@@ -13,7 +13,7 @@ import (
 )
 
 func TestServerRootPost(t *testing.T) {
-	server, err := NewServer("localhost", 8080)
+	server, err := NewServer("localhost", 8080, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -26,7 +26,7 @@ func TestServerRootPost(t *testing.T) {
 }
 
 func TestServerHealthz(t *testing.T) {
-	server, err := NewServer("localhost", 8080)
+	server, err := NewServer("localhost", 8080, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

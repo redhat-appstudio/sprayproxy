@@ -7,6 +7,7 @@ package proxy
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"net/http/httputil"
@@ -18,16 +19,18 @@ import (
 type BackendsFunc func() []string
 
 type SprayProxy struct {
-	backends BackendsFunc
+	backends     BackendsFunc
+	inesecureTLS bool
 }
 
-func NewSprayProxy(backends ...string) (*SprayProxy, error) {
+func NewSprayProxy(insecureTLS bool, backends ...string) (*SprayProxy, error) {
 	backendFn := func() []string {
 		return backends
 	}
 
 	return &SprayProxy{
-		backends: backendFn,
+		backends:     backendFn,
+		inesecureTLS: insecureTLS,
 	}, nil
 }
 
@@ -41,6 +44,13 @@ func (p *SprayProxy) HandleProxy(c *gin.Context) {
 		// Create a new request with a disconnected context
 		newRequest := copy.Request.WithContext(context.Background())
 		proxy := httputil.NewSingleHostReverseProxy(url)
+		if p.inesecureTLS {
+			proxy.Transport = &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true,
+				},
+			}
+		}
 		go doProxy(backend, proxy, newRequest)
 	}
 	c.String(http.StatusOK, "proxied")

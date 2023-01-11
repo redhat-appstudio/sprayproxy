@@ -21,8 +21,8 @@ type SprayProxyServer struct {
 	port   int
 }
 
-func NewServer(host string, port int, backends ...string) (*SprayProxyServer, error) {
-	sprayProxy, err := proxy.NewSprayProxy(backends...)
+func NewServer(host string, port int, insecureSkipTLS bool, backends ...string) (*SprayProxyServer, error) {
+	sprayProxy, err := proxy.NewSprayProxy(false, backends...)
 	if err != nil {
 		return nil, err
 	}
