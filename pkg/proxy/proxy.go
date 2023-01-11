@@ -7,6 +7,7 @@ package proxy
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"net/http/httputil"
@@ -18,16 +19,18 @@ import (
 type BackendsFunc func() []string
 
 type SprayProxy struct {
-	backends BackendsFunc
+	backends     BackendsFunc
+	inesecureTLS bool
 }
 
-func NewSprayProxy(backends ...string) (*SprayProxy, error) {
+func NewSprayProxy(insecureTLS bool, backends ...string) (*SprayProxy, error) {
 	backendFn := func() []string {
 		return backends
 	}
 
 	return &SprayProxy{
-		backends: backendFn,
+		backends:     backendFn,
+		inesecureTLS: insecureTLS,
 	}, nil
 }
 
@@ -41,6 +44,13 @@ func (p *SprayProxy) HandleProxy(c *gin.Context) {
 		// Create a new request with a disconnected context
 		newRequest := copy.Request.Clone(context.Background())
 		proxy := httputil.NewSingleHostReverseProxy(url)
+		if p.inesecureTLS {
+			proxy.Transport = &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true,
+				},
+			}
+		}
 		doProxy(backend, proxy, newRequest)
 	}
 	c.String(http.StatusOK, "proxied")
@@ -48,6 +58,12 @@ func (p *SprayProxy) HandleProxy(c *gin.Context) {
 
 func (p *SprayProxy) Backends() []string {
 	return p.backends()
+}
+
+// InsecureSkipTLSVerify indicates if the proxy is skipping TLS verification.
+// This setting is insecure and should not be used in production.
+func (p *SprayProxy) InsecureSkipTLSVerify() bool {
+	return p.inesecureTLS
 }
 
 // doProxy proxies the provided request to a backend, with response data to an "empty" response instance.
