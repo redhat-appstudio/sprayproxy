@@ -7,6 +7,7 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/adambkaplan/sprayproxy/pkg/server"
 )
@@ -21,6 +22,10 @@ Use the --backend flag to specify which servers to forward traffic to:
 sprayproxy server --backend http://localhost:8081 --backend http://localhost:8082
 	`,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		viper.AutomaticEnv()
+		host := viper.GetString("host")
+		port := viper.GetInt("port")
+		backends := viper.GetStringSlice("backends")
 		server, err := server.NewServer(host, port, backends...)
 		if err != nil {
 			return err
@@ -28,12 +33,6 @@ sprayproxy server --backend http://localhost:8081 --backend http://localhost:808
 		return server.Run()
 	},
 }
-
-var (
-	host     string
-	port     int
-	backends []string
-)
 
 func init() {
 	rootCmd.AddCommand(serverCmd)
@@ -47,8 +46,14 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// serverCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	serverCmd.Flags().StringVar(&host, "host", "localhost", "Host for running the server. Defaults to localhost")
-	serverCmd.Flags().IntVar(&port, "port", 8080, "Port for running the server. Defaults to 8080")
-	serverCmd.Flags().StringSliceVar(&backends, "backend", []string{}, "Backend to forward requests. Use more than once.")
+	viper.SetDefault("host", "")
+	viper.SetDefault("port", 8080)
 
+	viper.SetEnvPrefix("SPRAYPROXY_SERVER")
+
+	serverCmd.Flags().String("host", "", "Host for running the server. Defaults to localhost")
+	serverCmd.Flags().Int("port", 8080, "Port for running the server. Defaults to 8080")
+	serverCmd.Flags().StringSlice("backend", []string{}, "Backend to forward requests. Use more than once.")
+
+	viper.BindPFlags(serverCmd.Flags())
 }
