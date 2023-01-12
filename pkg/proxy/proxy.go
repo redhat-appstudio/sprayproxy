@@ -46,6 +46,10 @@ func (p *SprayProxy) HandleProxy(c *gin.Context) {
 	c.String(http.StatusOK, "proxied")
 }
 
+func (p *SprayProxy) Backends() []string {
+	return p.backends()
+}
+
 // doProxy proxies the provided request to a backend, with response data to an "empty" response instance.
 func doProxy(dest string, proxy *httputil.ReverseProxy, req *http.Request) {
 	writer := NewSprayWriter()

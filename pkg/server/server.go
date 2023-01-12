@@ -8,6 +8,7 @@ package server
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -40,7 +41,8 @@ func NewServer(host string, port int, backends ...string) (*SprayProxyServer, er
 // Run launches the proxy server with the pre-configured hostname and address.
 func (s *SprayProxyServer) Run() error {
 	address := fmt.Sprintf("%s:%d", s.host, s.port)
-	fmt.Printf("Running spray proxy on %s", address)
+	fmt.Printf("Running spray proxy on %s\n", address)
+	fmt.Printf("Forwarding traffic to %s\n", strings.Join(s.proxy.Backends(), ","))
 	return s.server.Run(address)
 }
 
