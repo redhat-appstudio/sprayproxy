@@ -28,6 +28,7 @@ func NewServer(host string, port int, backends ...string) (*SprayProxyServer, er
 		return nil, err
 	}
 	r := gin.Default()
+	r.GET("/", handleHealthz)
 	r.POST("/", sprayProxy.HandleProxy)
 	r.GET("/healthz", handleHealthz)
 	return &SprayProxyServer{
