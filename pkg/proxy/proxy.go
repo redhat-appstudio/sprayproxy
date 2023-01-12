@@ -39,9 +39,9 @@ func (p *SprayProxy) HandleProxy(c *gin.Context) {
 		}
 		copy := c.Copy()
 		// Create a new request with a disconnected context
-		newRequest := copy.Request.WithContext(context.Background())
+		newRequest := copy.Request.Clone(context.Background())
 		proxy := httputil.NewSingleHostReverseProxy(url)
-		go doProxy(backend, proxy, newRequest)
+		doProxy(backend, proxy, newRequest)
 	}
 	c.String(http.StatusOK, "proxied")
 }
