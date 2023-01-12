@@ -26,7 +26,8 @@ sprayproxy server --backend http://localhost:8081 --backend http://localhost:808
 		host := viper.GetString("host")
 		port := viper.GetInt("port")
 		backends := viper.GetStringSlice("backends")
-		server, err := server.NewServer(host, port, backends...)
+		insecureSkipTLSVerify := viper.GetBool("insecure-skip-tls-verify")
+		server, err := server.NewServer(host, port, insecureSkipTLSVerify, backends...)
 		if err != nil {
 			return err
 		}
@@ -54,6 +55,8 @@ func init() {
 	serverCmd.Flags().String("host", "", "Host for running the server. Defaults to localhost")
 	serverCmd.Flags().Int("port", 8080, "Port for running the server. Defaults to 8080")
 	serverCmd.Flags().StringSlice("backend", []string{}, "Backend to forward requests. Use more than once.")
+	serverCmd.Flags().Bool("insecure-skip-tls-verify", false, "Skip TLS verification on all backends. INSECURE - do not use in production.")
 
 	viper.BindPFlags(serverCmd.Flags())
+
 }

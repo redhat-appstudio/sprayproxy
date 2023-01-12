@@ -22,8 +22,8 @@ type SprayProxyServer struct {
 	port   int
 }
 
-func NewServer(host string, port int, backends ...string) (*SprayProxyServer, error) {
-	sprayProxy, err := proxy.NewSprayProxy(backends...)
+func NewServer(host string, port int, insecureSkipTLS bool, backends ...string) (*SprayProxyServer, error) {
+	sprayProxy, err := proxy.NewSprayProxy(insecureSkipTLS, backends...)
 	if err != nil {
 		return nil, err
 	}
@@ -44,6 +44,9 @@ func (s *SprayProxyServer) Run() error {
 	address := fmt.Sprintf("%s:%d", s.host, s.port)
 	fmt.Printf("Running spray proxy on %s\n", address)
 	fmt.Printf("Forwarding traffic to %s\n", strings.Join(s.proxy.Backends(), ","))
+	if s.proxy.InsecureSkipTLSVerify() {
+		fmt.Printf("WARNING: Skipping TLS verification on backends.")
+	}
 	return s.server.Run(address)
 }
 
