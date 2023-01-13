@@ -7,7 +7,6 @@ package proxy
 
 import (
 	"bytes"
-	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -46,30 +45,68 @@ func (p *SprayProxy) HandleProxy(c *gin.Context) {
 		c.String(http.StatusRequestEntityTooLarge, "too large: %v", err)
 		return
 	}
+	body := buf.Bytes()
+
+	client := &http.Client{}
+	if p.inesecureTLS {
+		client.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		}
+	}
 
 	for _, backend := range p.backends() {
-		url, err := url.Parse(backend)
+		backendURL, err := url.Parse(backend)
 		if err != nil {
 			continue
 		}
 		copy := c.Copy()
-		// Create a new request with a disconnected context
-		newRequest := copy.Request.Clone(context.Background())
-		// Deep copy the request body since this needs to be read multiple times
-		newRequest.Body = io.NopCloser(bytes.NewReader(buf.Bytes()))
-		proxy := httputil.NewSingleHostReverseProxy(url)
-		proxy.ErrorHandler = func(rw http.ResponseWriter, req *http.Request, err error) {
+		newURL := copy.Request.URL
+		newURL.Host = backendURL.Host
+		newURL.Scheme = backendURL.Scheme
+		newRequest, err := http.NewRequest(copy.Request.Method, newURL.String(), bytes.NewReader(body))
+		if err != nil {
+			fmt.Printf("failed to create request: %v\n", err)
 			errors = append(errors, err)
-			rw.WriteHeader(http.StatusBadGateway)
+			continue
 		}
-		if p.inesecureTLS {
-			proxy.Transport = &http.Transport{
-				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: true,
-				},
+		newRequest.Header = copy.Request.Header
+		resp, err := client.Do(newRequest)
+		if err != nil {
+			fmt.Printf("proxy error: %v\n", err)
+			errors = append(errors, err)
+			continue
+		}
+		defer resp.Body.Close()
+		fmt.Printf("proxied request to %s with response %d\n", newURL, resp.StatusCode)
+		if resp.StatusCode >= 400 {
+			respBody, err := io.ReadAll(resp.Body)
+			if err != nil {
+				fmt.Printf("failed to read response: %v\n", err)
+			} else {
+				fmt.Printf("response body: %v\n", string(respBody))
 			}
 		}
-		doProxy(backend, proxy, newRequest)
+
+		// // Create a new request with a disconnected context
+		// newRequest := copy.Request.Clone(context.Background())
+		// // Deep copy the request body since this needs to be read multiple times
+		// newRequest.Body = io.NopCloser(bytes.NewReader(body))
+
+		// proxy := httputil.NewSingleHostReverseProxy(backendURL)
+		// proxy.ErrorHandler = func(rw http.ResponseWriter, req *http.Request, err error) {
+		// 	errors = append(errors, err)
+		// 	rw.WriteHeader(http.StatusBadGateway)
+		// }
+		// if p.inesecureTLS {
+		// 	proxy.Transport = &http.Transport{
+		// 		TLSClientConfig: &tls.Config{
+		// 			InsecureSkipVerify: true,
+		// 		},
+		// 	}
+		// }
+		// doProxy(backend, proxy, newRequest)
 	}
 	if len(errors) > 0 {
 		// we have a bad gateway/connection somewhere
