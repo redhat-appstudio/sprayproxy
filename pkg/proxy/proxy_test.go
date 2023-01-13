@@ -21,7 +21,7 @@ func TestHandleProxy(t *testing.T) {
 	}
 	w := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(w)
-	ctx.Request = httptest.NewRequest(http.MethodPost, "localhost:8080", bytes.NewBufferString("hello"))
+	ctx.Request = httptest.NewRequest(http.MethodPost, "http://localhost:8080", bytes.NewBufferString("hello"))
 	proxy.HandleProxy(ctx)
 	if w.Code != http.StatusOK {
 		t.Errorf("expected status code %d, got %d", http.StatusOK, w.Code)
@@ -57,7 +57,7 @@ func TestHandleProxyMultiBackend(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(w)
-	ctx.Request = httptest.NewRequest(http.MethodPost, "localhost:8080", bytes.NewBufferString("hello world!"))
+	ctx.Request = httptest.NewRequest(http.MethodPost, "http://localhost:8080", bytes.NewBufferString("hello world!"))
 	proxy, err := NewSprayProxy(false, backend1.server.URL, backend2.server.URL)
 	if err != nil {
 		t.Fatalf("failed to set up proxy: %v", err)
