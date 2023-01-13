@@ -6,6 +6,8 @@ SPDX-License-Identifier: Apache-2.0
 package cmd
 
 import (
+	"strings"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -51,6 +53,8 @@ func init() {
 	viper.SetDefault("port", 8080)
 
 	viper.SetEnvPrefix("SPRAYPROXY_SERVER")
+	// Replace "-" with underscores "_"
+	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 
 	serverCmd.Flags().String("host", "", "Host for running the server. Defaults to localhost")
 	serverCmd.Flags().Int("port", 8080, "Port for running the server. Defaults to 8080")
