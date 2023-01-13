@@ -45,7 +45,7 @@ func (s *SprayProxyServer) Run() error {
 	fmt.Printf("Running spray proxy on %s\n", address)
 	fmt.Printf("Forwarding traffic to %s\n", strings.Join(s.proxy.Backends(), ","))
 	if s.proxy.InsecureSkipTLSVerify() {
-		fmt.Printf("WARNING: Skipping TLS verification on backends.")
+		fmt.Printf("WARNING: Skipping TLS verification on backends.\n")
 	}
 	return s.server.Run(address)
 }
