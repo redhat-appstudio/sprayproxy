@@ -6,9 +6,11 @@ SPDX-License-Identifier: Apache-2.0
 package proxy
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -35,6 +37,16 @@ func NewSprayProxy(insecureTLS bool, backends ...string) (*SprayProxy, error) {
 }
 
 func (p *SprayProxy) HandleProxy(c *gin.Context) {
+	errors := []error{}
+	// Read in body from incoming request
+	buf := &bytes.Buffer{}
+	_, err := buf.ReadFrom(c.Request.Body)
+	defer c.Request.Body.Close()
+	if err != nil {
+		c.String(http.StatusRequestEntityTooLarge, "too large: %v", err)
+		return
+	}
+
 	for _, backend := range p.backends() {
 		url, err := url.Parse(backend)
 		if err != nil {
@@ -43,7 +55,13 @@ func (p *SprayProxy) HandleProxy(c *gin.Context) {
 		copy := c.Copy()
 		// Create a new request with a disconnected context
 		newRequest := copy.Request.Clone(context.Background())
+		// Deep copy the request body since this needs to be read multiple times
+		newRequest.Body = io.NopCloser(bytes.NewReader(buf.Bytes()))
 		proxy := httputil.NewSingleHostReverseProxy(url)
+		proxy.ErrorHandler = func(rw http.ResponseWriter, req *http.Request, err error) {
+			errors = append(errors, err)
+			rw.WriteHeader(http.StatusBadGateway)
+		}
 		if p.inesecureTLS {
 			proxy.Transport = &http.Transport{
 				TLSClientConfig: &tls.Config{
@@ -52,6 +70,11 @@ func (p *SprayProxy) HandleProxy(c *gin.Context) {
 			}
 		}
 		doProxy(backend, proxy, newRequest)
+	}
+	if len(errors) > 0 {
+		// we have a bad gateway/connection somewhere
+		c.String(http.StatusBadGateway, "failed to proxy: %v", errors)
+		return
 	}
 	c.String(http.StatusOK, "proxied")
 }
