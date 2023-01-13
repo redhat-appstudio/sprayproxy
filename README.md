@@ -2,6 +2,8 @@
 
 A very simple reverse proxy that broadcasts to multiple backends.
 
+Hello I am testing the proxy in real time!
+
 ## Try it!
 
 ```sh
