@@ -13,8 +13,10 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redhat-appstudio/sprayproxy/pkg/metrics"
 )
 
 type BackendsFunc func() []string
@@ -36,6 +38,8 @@ func NewSprayProxy(insecureTLS bool, backends ...string) (*SprayProxy, error) {
 }
 
 func (p *SprayProxy) HandleProxy(c *gin.Context) {
+	// currently not distinguishing between requests we can parse and those we cannot parse
+	metrics.IncInboundCount()
 	errors := []error{}
 	// Read in body from incoming request
 	buf := &bytes.Buffer{}
@@ -72,7 +76,14 @@ func (p *SprayProxy) HandleProxy(c *gin.Context) {
 			continue
 		}
 		newRequest.Header = copy.Request.Header
+		// currently not distinguishing between requests we send and requests that return without error
+		metrics.IncForwardedCount(backendURL.Host)
+
+		// for response time, we are making it "simpler" and including everything in the client.Do call
+		start := time.Now()
 		resp, err := client.Do(newRequest)
+		responseTime := time.Now().Sub(start)
+		metrics.AddForwardedResponseTime(responseTime.Seconds())
 		if err != nil {
 			fmt.Printf("proxy error: %v\n", err)
 			errors = append(errors, err)
