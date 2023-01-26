@@ -12,7 +12,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/adambkaplan/sprayproxy/pkg/proxy"
+	"github.com/redhat-appstudio/sprayproxy/pkg/proxy"
 )
 
 type SprayProxyServer struct {

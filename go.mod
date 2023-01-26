@@ -1,4 +1,4 @@
-module github.com/adambkaplan/sprayproxy
+module github.com/redhat-appstudio/sprayproxy
 
 go 1.18
 

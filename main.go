@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 */
 package main
 
-import "github.com/adambkaplan/sprayproxy/cmd"
+import "github.com/redhat-appstudio/sprayproxy/cmd"
 
 func main() {
 	cmd.Execute()

@@ -2,11 +2,11 @@
 
 A very simple reverse proxy that broadcasts to multiple backends.
 
-## Try it!
+## Try it
 
 ```sh
-$ make build
-$ bin/sprayproxy server --backend <backend-server> --backend <another-backend-server>
+make build
+bin/sprayproxy server --backend <backend-server> --backend <another-backend-server>
 ```
 
 You can also configure the proxy with environment variables:
@@ -15,9 +15,10 @@ You can also configure the proxy with environment variables:
 * `SPRAYPROXY_SERVER_PORT`: port to serve the proxy
 * `SPRAYPROXY_SERVER_BACKENDS`: a space-separated list of backends to forward traffic. Example:
 
-  ```
-  SPRAYPROXY_SERVER_BACKENDS="http://localhost:8080 http://localhost:8081"
-  ```
+```sh
+SPRAYPROXY_SERVER_BACKENDS="http://localhost:8080 http://localhost:8081"
+```
+
 * `SPRAYPROXY_SERVER_INSECURE_SKIP_TLS_VERIFY`: Skip TLS verification when forwarding to backends.
   **Note: this setting is insecure and should not be used in production environments.**
 
