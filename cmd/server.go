@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/adambkaplan/sprayproxy/pkg/server"
+	"github.com/redhat-appstudio/sprayproxy/pkg/server"
 )
 
 // serverCmd represents the server command
