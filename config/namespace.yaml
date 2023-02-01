@@ -1,0 +1,7 @@
+# Copyright © 2023 The Spray Proxy Contributors
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: redhat-sprayproxy

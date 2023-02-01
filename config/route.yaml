@@ -1,0 +1,14 @@
+# Copyright © 2023 The Spray Proxy Contributors
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: sprayproxy-route
+  namespace: redhat-sprayproxy
+spec:
+  tls:
+    termination: edge
+  to:
+    kind: Service
+    name: sprayproxy-service
