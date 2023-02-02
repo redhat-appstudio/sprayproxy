@@ -9,11 +9,17 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
+	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 
+	"github.com/redhat-appstudio/sprayproxy/pkg/logger"
 	"github.com/redhat-appstudio/sprayproxy/pkg/proxy"
 )
+
+var zapLogger *zap.Logger
 
 type SprayProxyServer struct {
 	server *gin.Engine
@@ -22,12 +28,21 @@ type SprayProxyServer struct {
 	port   int
 }
 
+func init() {
+	zapLogger = logger.Get()
+}
+
 func NewServer(host string, port int, insecureSkipTLS bool, backends ...string) (*SprayProxyServer, error) {
 	sprayProxy, err := proxy.NewSprayProxy(insecureSkipTLS, backends...)
 	if err != nil {
 		return nil, err
 	}
-	r := gin.Default()
+	// comment/uncomment to switch between debug and release mode
+	//gin.SetMode(gin.ReleaseMode)
+	r := gin.New()
+	// setting middleware before routes, otherwise it does not work (gin bug)
+	r.Use(ginzap.Ginzap(zapLogger, time.RFC3339, true))
+	r.Use(ginzap.RecoveryWithZap(zapLogger, true))
 	r.GET("/", handleHealthz)
 	r.POST("/", sprayProxy.HandleProxy)
 	r.GET("/healthz", handleHealthz)
@@ -47,6 +62,7 @@ func (s *SprayProxyServer) Run() error {
 	if s.proxy.InsecureSkipTLSVerify() {
 		fmt.Printf("WARNING: Skipping TLS verification on backends.\n")
 	}
+	defer zapLogger.Sync()
 	return s.server.Run(address)
 }
 
