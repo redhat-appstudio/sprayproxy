@@ -29,12 +29,28 @@ spec:
           ports:
             - containerPort: 8080
               name: server
-            - containerPort: 6000
-              name: metrics
           resources:
             limits:
               memory: "128Mi"
               cpu: "500m"
+        - name: kube-rbac-proxy
+          image: registry.redhat.io/openshift4/ose-kube-rbac-proxy:v4.12
+          args:
+            - "--secure-listen-address=0.0.0.0:8443"
+            - "--upstream=http://127.0.0.1:6000/"
+            - "--logtostderr=true"
+            - "--v=0"
+          ports:
+            - containerPort: 8443
+              protocol: TCP
+              name: https
+          resources:
+            limits:
+              cpu: 500m
+              memory: 128Mi
+            requests:
+              cpu: 5m
+              memory: 64Mi
 ---
 apiVersion: v1
 kind: Service
@@ -48,6 +64,17 @@ spec:
     - name: server
       protocol: TCP
       port: 8080
-    - name: metric
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sprayproxy-metrics-service
+  namespace: redhat-sprayproxy
+spec:
+  selector:
+    app.kubernetes.io/name: sprayproxy
+  ports:
+    - name: https
       protocol: TCP
-      port: 6000
+      port: 8443
+      targetPort: https
