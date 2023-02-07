@@ -33,7 +33,7 @@ sprayproxy server --backend http://localhost:8081 --backend http://localhost:808
 		host := viper.GetString("host")
 		port := viper.GetInt("port")
 		metricsPort := viper.GetInt("metrics-port")
-		backends := viper.GetStringSlice("backends")
+		backends := viper.GetStringSlice("backend")
 		insecureSkipTLSVerify := viper.GetBool("insecure-skip-tls-verify")
 		crtFile := viper.GetString("metrics-cert")
 		keyFile := viper.GetString("metrics-key")
