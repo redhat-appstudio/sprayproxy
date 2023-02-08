@@ -13,10 +13,10 @@ You can also configure the proxy with environment variables:
 
 * `SPRAYPROXY_SERVER_HOST`: host for the proxy
 * `SPRAYPROXY_SERVER_PORT`: port to serve the proxy
-* `SPRAYPROXY_SERVER_BACKENDS`: a space-separated list of backends to forward traffic. Example:
+* `SPRAYPROXY_SERVER_BACKEND`: a space-separated list of backends to forward traffic. Example:
 
 ```sh
-SPRAYPROXY_SERVER_BACKENDS="http://localhost:8080 http://localhost:8081"
+SPRAYPROXY_SERVER_BACKEND="http://localhost:8080 http://localhost:8081"
 ```
 
 * `SPRAYPROXY_SERVER_INSECURE_SKIP_TLS_VERIFY`: Skip TLS verification when forwarding to backends.

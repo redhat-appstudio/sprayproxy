@@ -25,7 +25,7 @@ spec:
           args:
             - server
           env:
-            - name: SPRAYPROXY_SERVER_BACKENDS
+            - name: SPRAYPROXY_SERVER_BACKEND
           ports:
             - containerPort: 8080
               name: server
