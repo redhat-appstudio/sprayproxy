@@ -8,5 +8,5 @@ roleRef:
   name: metrics-proxy-role
 subjects:
   - kind: ServiceAccount
-    name: redhat-sprayproxy
-    namespace: redhat-sprayproxy
+    name: sprayproxy
+    namespace: sprayproxy
