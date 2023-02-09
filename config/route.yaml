@@ -5,7 +5,7 @@ apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
   name: sprayproxy-route
-  namespace: redhat-sprayproxy
+  namespace: sprayproxy
 spec:
   tls:
     termination: edge

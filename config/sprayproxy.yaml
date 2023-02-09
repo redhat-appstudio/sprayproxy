@@ -5,7 +5,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: sprayproxy
-  namespace: redhat-sprayproxy
+  namespace: sprayproxy
   labels:
     app.kubernetes.io/name: sprayproxy
 spec:
@@ -18,7 +18,7 @@ spec:
       labels:
         app.kubernetes.io/name: sprayproxy
     spec:
-      serviceAccountName: redhat-sprayproxy
+      serviceAccountName: sprayproxy
       containers:
         - name: sprayproxy
           image: ko://github.com/redhat-appstudio/sprayproxy
@@ -56,7 +56,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: sprayproxy-service
-  namespace: redhat-sprayproxy
+  namespace: sprayproxy
 spec:
   selector:
     app.kubernetes.io/name: sprayproxy
@@ -69,7 +69,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: sprayproxy-metrics-service
-  namespace: redhat-sprayproxy
+  namespace: sprayproxy
 spec:
   selector:
     app.kubernetes.io/name: sprayproxy
