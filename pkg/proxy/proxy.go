@@ -17,6 +17,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/redhat-appstudio/sprayproxy/pkg/metrics"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 type BackendsFunc func() []string
@@ -24,9 +26,10 @@ type BackendsFunc func() []string
 type SprayProxy struct {
 	backends    BackendsFunc
 	insecureTLS bool
+	logger      *zap.Logger
 }
 
-func NewSprayProxy(insecureTLS bool, backends ...string) (*SprayProxy, error) {
+func NewSprayProxy(insecureTLS bool, logger *zap.Logger, backends ...string) (*SprayProxy, error) {
 	backendFn := func() []string {
 		return backends
 	}
@@ -34,6 +37,7 @@ func NewSprayProxy(insecureTLS bool, backends ...string) (*SprayProxy, error) {
 	return &SprayProxy{
 		backends:    backendFn,
 		insecureTLS: insecureTLS,
+		logger:      logger,
 	}, nil
 }
 
@@ -41,12 +45,19 @@ func (p *SprayProxy) HandleProxy(c *gin.Context) {
 	// currently not distinguishing between requests we can parse and those we cannot parse
 	metrics.IncInboundCount()
 	errors := []error{}
+	zapCommonFields := []zapcore.Field{
+		zap.String("method", c.Request.Method),
+		zap.String("path", c.Request.URL.Path),
+		zap.String("query", c.Request.URL.RawQuery),
+		zap.Bool("insecure-tls", p.insecureTLS),
+	}
 	// Read in body from incoming request
 	buf := &bytes.Buffer{}
 	_, err := buf.ReadFrom(c.Request.Body)
 	defer c.Request.Body.Close()
 	if err != nil {
 		c.String(http.StatusRequestEntityTooLarge, "too large: %v", err)
+		p.logger.Error("request body too large", zapCommonFields...)
 		return
 	}
 	body := buf.Bytes()
@@ -63,15 +74,19 @@ func (p *SprayProxy) HandleProxy(c *gin.Context) {
 	for _, backend := range p.backends() {
 		backendURL, err := url.Parse(backend)
 		if err != nil {
+			p.logger.Error("failed to parse backend "+err.Error(), zapCommonFields...)
 			continue
 		}
 		copy := c.Copy()
 		newURL := copy.Request.URL
 		newURL.Host = backendURL.Host
 		newURL.Scheme = backendURL.Scheme
+		// zap always append and does not override field entries, so we create
+		// per backend list of fields
+		zapBackendFields := append(zapCommonFields, zap.String("backend", newURL.Host))
 		newRequest, err := http.NewRequest(copy.Request.Method, newURL.String(), bytes.NewReader(body))
 		if err != nil {
-			fmt.Printf("failed to create request: %v\n", err)
+			p.logger.Error("failed to create request: "+err.Error(), zapBackendFields...)
 			errors = append(errors, err)
 			continue
 		}
@@ -84,19 +99,22 @@ func (p *SprayProxy) HandleProxy(c *gin.Context) {
 		resp, err := client.Do(newRequest)
 		responseTime := time.Now().Sub(start)
 		metrics.AddForwardedResponseTime(responseTime.Seconds())
+		// standartize on what ginzap logs
+		zapBackendFields = append(zapBackendFields, zap.Duration("latency", responseTime))
 		if err != nil {
-			fmt.Printf("proxy error: %v\n", err)
+			p.logger.Error("proxy error: "+err.Error(), zapBackendFields...)
 			errors = append(errors, err)
 			continue
 		}
 		defer resp.Body.Close()
-		fmt.Printf("proxied request to %s with response %d\n", newURL, resp.StatusCode)
+		zapBackendFields = append(zapBackendFields, zap.Int("status", resp.StatusCode))
+		p.logger.Info("proxied request", zapBackendFields...)
 		if resp.StatusCode >= 400 {
 			respBody, err := io.ReadAll(resp.Body)
 			if err != nil {
-				fmt.Printf("failed to read response: %v\n", err)
+				p.logger.Info("failed to read response: "+err.Error(), zapBackendFields...)
 			} else {
-				fmt.Printf("response body: %v\n", string(respBody))
+				p.logger.Info("response body: "+string(respBody), zapBackendFields...)
 			}
 		}
 

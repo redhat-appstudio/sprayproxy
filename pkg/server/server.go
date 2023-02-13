@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
@@ -33,7 +32,7 @@ func init() {
 }
 
 func NewServer(host string, port int, insecureSkipTLS bool, backends ...string) (*SprayProxyServer, error) {
-	sprayProxy, err := proxy.NewSprayProxy(insecureSkipTLS, backends...)
+	sprayProxy, err := proxy.NewSprayProxy(insecureSkipTLS, zapLogger, backends...)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +40,7 @@ func NewServer(host string, port int, insecureSkipTLS bool, backends ...string) 
 	//gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	// setting middleware before routes, otherwise it does not work (gin bug)
-	r.Use(ginzap.Ginzap(zapLogger, time.RFC3339, true))
+	r.Use(ginzap.GinzapWithConfig(zapLogger, &ginzap.Config{}))
 	r.Use(ginzap.RecoveryWithZap(zapLogger, true))
 	r.GET("/", handleHealthz)
 	r.POST("/", sprayProxy.HandleProxy)

@@ -9,13 +9,16 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 func TestHandleProxy(t *testing.T) {
-	proxy, err := NewSprayProxy(false)
+	proxy, err := NewSprayProxy(false, zap.NewNop())
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -58,7 +61,7 @@ func TestHandleProxyMultiBackend(t *testing.T) {
 	w := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(w)
 	ctx.Request = httptest.NewRequest(http.MethodPost, "http://localhost:8080", bytes.NewBufferString("hello world!"))
-	proxy, err := NewSprayProxy(false, backend1.server.URL, backend2.server.URL)
+	proxy, err := NewSprayProxy(false, zap.NewNop(), backend1.server.URL, backend2.server.URL)
 	if err != nil {
 		t.Fatalf("failed to set up proxy: %v", err)
 	}
@@ -85,4 +88,30 @@ func newTestServer() *testBackend {
 	mux.Handle("/proxy", testServer)
 	testServer.server = httptest.NewServer(mux)
 	return testServer
+}
+
+func TestProxyLog(t *testing.T) {
+	var buff bytes.Buffer
+	config := zap.NewProductionConfig()
+	core := zapcore.NewCore(
+		zapcore.NewJSONEncoder(config.EncoderConfig),
+		zapcore.AddSync(&buff),
+		config.Level,
+	)
+	logger := zap.New(core)
+	backend := newTestServer()
+	defer backend.server.Close()
+	proxy, err := NewSprayProxy(false, logger, backend.server.URL)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	w := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(w)
+	ctx.Request = httptest.NewRequest(http.MethodPost, "http://localhost:8080", bytes.NewBufferString("hello"))
+	proxy.HandleProxy(ctx)
+	expected := `"msg":"proxied request"`
+	log := buff.String()
+	if !strings.Contains(log, expected) {
+		t.Errorf("expected string %q did not appear in %q", expected, log)
+	}
 }
