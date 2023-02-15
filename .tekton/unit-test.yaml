@@ -1,0 +1,66 @@
+---
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: sprayproxy-unit-test-on-pull-request
+  annotations:
+    pipelinesascode.tekton.dev/on-event: "[pull_request]"
+    pipelinesascode.tekton.dev/on-target-branch: "[main]"
+    pipelinesascode.tekton.dev/max-keep-runs: "5"
+spec:
+  timeouts:
+    pipeline: "0h20m0s"
+    tasks: "0h5m0s"
+  params:
+    - name: repo_url
+      value: "{{ repo_url }}"
+    - name: revision
+      value: "{{ revision }}"
+    - name: target_branch
+      value: "{{ target_branch }}"
+  pipelineSpec:
+    params:
+      - name: repo_url
+      - name: revision
+      - name: target_branch
+    workspaces:
+      - name: source
+    tasks:
+      - name: fetch-repository
+        taskRef:
+          bundle: quay.io/redhat-appstudio/appstudio-tasks:748a03507b68aa610212e8031e3301ab943a14ef-1
+          name: git-clone
+        workspaces:
+          - name: output
+            workspace: source
+        params:
+          - name: url
+            value: $(params.repo_url)
+          - name: revision
+            value: $(params.revision)
+      - name: unit-tests
+        runAfter:
+          - fetch-repository
+        workspaces:
+          - name: source
+            workspace: source
+        taskSpec:
+          steps:
+            - name: unit-tests
+              image: registry.access.redhat.com/ubi9/go-toolset:1.18
+              imagePullPolicy: Always
+              script: |
+                #!/usr/bin/env bash
+                cd $(workspaces.source.path)
+                go test ./...
+          workspaces:
+            - name: source
+  workspaces:
+    - name: source
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 1Gi
