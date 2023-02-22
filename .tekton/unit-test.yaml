@@ -28,7 +28,7 @@ spec:
     tasks:
       - name: fetch-repository
         taskRef:
-          bundle: quay.io/redhat-appstudio/appstudio-tasks:748a03507b68aa610212e8031e3301ab943a14ef-1
+          bundle: quay.io/redhat-appstudio-tekton-catalog/task-git-clone:0.1
           name: git-clone
         workspaces:
           - name: output
