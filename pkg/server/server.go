@@ -15,8 +15,8 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
+	"github.com/redhat-appstudio/sprayproxy/pkg/apis/proxy"
 	"github.com/redhat-appstudio/sprayproxy/pkg/logger"
-	"github.com/redhat-appstudio/sprayproxy/pkg/proxy"
 )
 
 var zapLogger *zap.Logger
@@ -36,8 +36,8 @@ func SetLogger(logger *zap.Logger) {
 	zapLogger = logger
 }
 
-func NewServer(host string, port int, insecureSkipTLS, insecureSkipWebhookVerify bool, backends ...string) (*SprayProxyServer, error) {
-	sprayProxy, err := proxy.NewSprayProxy(insecureSkipTLS, insecureSkipWebhookVerify, zapLogger, backends...)
+func NewServer(host string, port int, insecureSkipTLS, insecureSkipWebhookVerify, enableDynamicBackends bool, backends map[string]string) (*SprayProxyServer, error) {
+	sprayProxy, err := proxy.NewSprayProxy(insecureSkipTLS, insecureSkipWebhookVerify, enableDynamicBackends, zapLogger, backends)
 	if err != nil {
 		return nil, err
 	}
@@ -64,6 +64,11 @@ func NewServer(host string, port int, insecureSkipTLS, insecureSkipWebhookVerify
 	r.POST("/", sprayProxy.HandleProxy)
 	r.GET("/proxy", handleHealthz)
 	r.POST("/proxy", sprayProxy.HandleProxyEndpoint)
+	if enableDynamicBackends {
+		r.GET("/backends", sprayProxy.GetBackends)
+		r.POST("/backends", sprayProxy.RegisterBackend)
+		r.DELETE("/backends", sprayProxy.UnregisterBackend)
+	}
 	r.GET("/healthz", handleHealthz)
 	return &SprayProxyServer{
 		server: r,

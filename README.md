@@ -29,6 +29,8 @@ The following environment variables are insecure and should not be used in produ
 * `SPRAYPROXY_SERVER_INSECURE_SKIP_TLS_VERIFY`: Skip TLS verification when forwarding to backends.
 * `SPRAYPROXY_SERVER_INSECURE_SKIP_WEBHOOK_VERIFY`: Skip GitHub webhook verification for incoming
   requests.
+* `SPRAYPROXY_SERVER_ENABLE_DYNAMIC_BACKENDS`: Register and Unregister backends on the fly.
+  **Note: this setting is for stateless deployment of the sprayproxy and should not be used in production and staging environments.**
 
 
 ## Developing

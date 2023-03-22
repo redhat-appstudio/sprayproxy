@@ -30,15 +30,21 @@ sprayproxy server --backend http://localhost:8081 --backend http://localhost:808
 	`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		viper.AutomaticEnv()
+		backends := make(map[string]string)
 		host := viper.GetString("host")
 		port := viper.GetInt("port")
 		metricsPort := viper.GetInt("metrics-port")
-		backends := viper.GetStringSlice("backend")
+		backendSlice := viper.GetStringSlice("backend")
+		// backendSlice values into map
+		for _, b := range backendSlice {
+			backends[b] = ""
+		}
+		enableDynamicBackends := viper.GetBool("enable-dynamic-backends")
 		insecureSkipTLSVerify := viper.GetBool("insecure-skip-tls-verify")
 		insecureSkipWebhookVerify := viper.GetBool("insecure-skip-webhook-verify")
 		crtFile := viper.GetString("metrics-cert")
 		keyFile := viper.GetString("metrics-key")
-		server, err := server.NewServer(host, port, insecureSkipTLSVerify, insecureSkipWebhookVerify, backends...)
+		server, err := server.NewServer(host, port, insecureSkipTLSVerify, insecureSkipWebhookVerify, enableDynamicBackends, backends)
 		if err != nil {
 			return err
 		}
@@ -90,6 +96,7 @@ func init() {
 	serverCmd.Flags().String("host", "", "Host for running the server. Defaults to localhost")
 	serverCmd.Flags().Int("port", 8080, "Port for running the server. Defaults to 8080")
 	serverCmd.Flags().StringSlice("backend", []string{}, "Backend to forward requests. Use more than once.")
+	serverCmd.Flags().Bool("enable-dynamic-backends", false, "Register and Unregister backends on the fly. Defaults to false, meaning only used for stateless deployment")
 	serverCmd.Flags().Bool("insecure-skip-tls-verify", false, "Skip TLS verification on all backends. INSECURE - do not use in production.")
 	serverCmd.Flags().Bool("insecure-skip-webhook-verify", false, "Skip webhook payload verification. INSECURE - do not use in production.")
 	serverCmd.Flags().Int("metrics-port", metrics.MetricsPort, fmt.Sprintf("Port for the prometheus metrics endpoint.  Defaults to %d", metrics.MetricsPort))
