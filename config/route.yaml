@@ -9,6 +9,7 @@ metadata:
 spec:
   tls:
     termination: edge
+    insecureEdgeTermination: Redirect
   to:
     kind: Service
     name: sprayproxy-service
