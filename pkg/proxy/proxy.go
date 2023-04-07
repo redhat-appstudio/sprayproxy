@@ -50,6 +50,7 @@ func (p *SprayProxy) HandleProxy(c *gin.Context) {
 		zap.String("path", c.Request.URL.Path),
 		zap.String("query", c.Request.URL.RawQuery),
 		zap.Bool("insecure-tls", p.insecureTLS),
+		zap.String("request-id", c.GetString("requestId")),
 	}
 	// Read in body from incoming request
 	buf := &bytes.Buffer{}

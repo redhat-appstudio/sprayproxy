@@ -1,4 +1,4 @@
-.PHONY: all, build, test, run
+.PHONY: all build test run
 
 CONTAINER_ENGINE ?= "podman"
 IMAGE ?= "sprayproxy"
@@ -11,7 +11,7 @@ build:
 	go build -o bin/sprayproxy main.go
 
 test:
-	go test ./...
+	go test -count=1 ./...
 
 run:
 	go run main.go server --host localhost --port 8080

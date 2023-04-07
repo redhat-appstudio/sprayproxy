@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redhat-appstudio/sprayproxy/test"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -35,33 +36,16 @@ func TestHandleProxy(t *testing.T) {
 	}
 }
 
-type testBackend struct {
-	server *httptest.Server
-	err    error
-}
-
-func (b *testBackend) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	buf := &bytes.Buffer{}
-	_, err := buf.ReadFrom(req.Body)
-	defer req.Body.Close()
-	if err != nil {
-		b.err = err
-		rw.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	rw.WriteHeader(http.StatusOK)
-}
-
 func TestHandleProxyMultiBackend(t *testing.T) {
-	backend1 := newTestServer()
-	defer backend1.server.Close()
-	backend2 := newTestServer()
-	defer backend2.server.Close()
+	backend1 := test.NewTestServer()
+	defer backend1.GetServer().Close()
+	backend2 := test.NewTestServer()
+	defer backend2.GetServer().Close()
 
 	w := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(w)
 	ctx.Request = httptest.NewRequest(http.MethodPost, "http://localhost:8080", bytes.NewBufferString("hello world!"))
-	proxy, err := NewSprayProxy(false, zap.NewNop(), backend1.server.URL, backend2.server.URL)
+	proxy, err := NewSprayProxy(false, zap.NewNop(), backend1.GetServer().URL, backend2.GetServer().URL)
 	if err != nil {
 		t.Fatalf("failed to set up proxy: %v", err)
 	}
@@ -74,20 +58,12 @@ func TestHandleProxyMultiBackend(t *testing.T) {
 		t.Errorf("expected response %q, got %q", "proxied", responseBody)
 	}
 
-	if backend1.err != nil {
-		t.Errorf("backend 1 error: %v", backend1.err)
+	if backend1.GetError() != nil {
+		t.Errorf("backend 1 error: %v", backend1.GetError())
 	}
-	if backend2.err != nil {
-		t.Errorf("backend 2 error: %v", backend2.err)
+	if backend2.GetError() != nil {
+		t.Errorf("backend 2 error: %v", backend2.GetError())
 	}
-}
-
-func newTestServer() *testBackend {
-	testServer := &testBackend{}
-	mux := http.NewServeMux()
-	mux.Handle("/proxy", testServer)
-	testServer.server = httptest.NewServer(mux)
-	return testServer
 }
 
 func TestProxyLog(t *testing.T) {
@@ -99,9 +75,9 @@ func TestProxyLog(t *testing.T) {
 		config.Level,
 	)
 	logger := zap.New(core)
-	backend := newTestServer()
-	defer backend.server.Close()
-	proxy, err := NewSprayProxy(false, logger, backend.server.URL)
+	backend := test.NewTestServer()
+	defer backend.GetServer().Close()
+	proxy, err := NewSprayProxy(false, logger, backend.GetServer().URL)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
