@@ -6,6 +6,8 @@ kind: Route
 metadata:
   name: sprayproxy-route
   namespace: sprayproxy
+  annotations:
+    haproxy.router.openshift.io/hsts_header: "max-age=63072000"
 spec:
   tls:
     termination: edge
