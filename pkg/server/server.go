@@ -13,6 +13,7 @@ import (
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/redhat-appstudio/sprayproxy/pkg/logger"
 	"github.com/redhat-appstudio/sprayproxy/pkg/proxy"
@@ -31,6 +32,10 @@ func init() {
 	zapLogger = logger.Get()
 }
 
+func SetLogger(logger *zap.Logger) {
+	zapLogger = logger
+}
+
 func NewServer(host string, port int, insecureSkipTLS bool, backends ...string) (*SprayProxyServer, error) {
 	sprayProxy, err := proxy.NewSprayProxy(insecureSkipTLS, zapLogger, backends...)
 	if err != nil {
@@ -39,8 +44,16 @@ func NewServer(host string, port int, insecureSkipTLS bool, backends ...string) 
 	// comment/uncomment to switch between debug and release mode
 	//gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
-	// setting middleware before routes, otherwise it does not work (gin bug)
-	r.Use(ginzap.GinzapWithConfig(zapLogger, &ginzap.Config{}))
+	// set middleware before routes, otherwise it does not work (gin bug).
+	// The addRequestId middleware must be set before the logging middleware.
+	r.Use(addRequestId())
+	r.Use(ginzap.GinzapWithConfig(zapLogger, &ginzap.Config{
+		Context: ginzap.Fn(func(c *gin.Context) []zapcore.Field {
+			return []zapcore.Field{
+				zap.String("request-id", c.GetString("requestId")),
+			}
+		}),
+	}))
 	r.Use(ginzap.RecoveryWithZap(zapLogger, true))
 	r.GET("/", handleHealthz)
 	r.POST("/", sprayProxy.HandleProxy)
