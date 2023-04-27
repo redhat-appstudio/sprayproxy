@@ -11,7 +11,7 @@ import (
 func Get() *zap.Logger {
 	config := zap.NewProductionConfig()
 	config.DisableStacktrace = true
-	config.InitialFields = map[string]any{"service": "sprayproxy"}
+	config.InitialFields = map[string]any{"service": "sprayproxy", "audit": "true"}
 	config.EncoderConfig.EncodeTime = utcRFC3339TimeEncoder
 	logger, err := config.Build()
 	if err != nil {
