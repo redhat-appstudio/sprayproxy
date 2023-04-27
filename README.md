@@ -22,6 +22,10 @@ SPRAYPROXY_SERVER_BACKEND="http://localhost:8080 http://localhost:8081"
 * `SPRAYPROXY_SERVER_INSECURE_SKIP_TLS_VERIFY`: Skip TLS verification when forwarding to backends.
   **Note: this setting is insecure and should not be used in production environments.**
 
+Other configuration options:
+
+* `SPRAYPROXY_FORWARDING_REQUEST_TIMEOUT`: override the default forwarding request timeout.
+
 ## Developing
 
 * Run `make build` to build the proxy sever (output to `bin/sprayproxy`)
