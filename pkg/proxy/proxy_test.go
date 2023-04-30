@@ -18,6 +18,45 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+func TestProxyDefaultTimeoutNoEnv(t *testing.T) {
+	proxy, err := NewSprayProxy(false, zap.NewNop())
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	expectedTmout := "15s"
+	gotTmout := proxy.fwdReqTmout.String()
+	if expectedTmout != gotTmout {
+		t.Errorf("expected timeout %q, got %q", expectedTmout, gotTmout)
+	}
+}
+
+func TestProxyDefaultTimeoutBadEnv(t *testing.T) {
+	// "foo" is not a time.Duration value and should be ignored
+	t.Setenv("SPRAYPROXY_FORWARDING_REQUEST_TIMEOUT", "foo")
+	proxy, err := NewSprayProxy(false, zap.NewNop())
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	expectedTmout := "15s"
+	gotTmout := proxy.fwdReqTmout.String()
+	if expectedTmout != gotTmout {
+		t.Errorf("expected timeout %q, got %q", expectedTmout, gotTmout)
+	}
+}
+
+func TestProxyCustomTimeout(t *testing.T) {
+	t.Setenv("SPRAYPROXY_FORWARDING_REQUEST_TIMEOUT", "90s")
+	proxy, err := NewSprayProxy(false, zap.NewNop())
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	expectedTmout := "1m30s"
+	gotTmout := proxy.fwdReqTmout.String()
+	if expectedTmout != gotTmout {
+		t.Errorf("expected timeout %q, got %q", expectedTmout, gotTmout)
+	}
+}
+
 func TestHandleProxy(t *testing.T) {
 	proxy, err := NewSprayProxy(false, zap.NewNop())
 	if err != nil {

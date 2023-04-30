@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -27,6 +28,7 @@ type SprayProxy struct {
 	backends    BackendsFunc
 	insecureTLS bool
 	logger      *zap.Logger
+	fwdReqTmout time.Duration
 }
 
 func NewSprayProxy(insecureTLS bool, logger *zap.Logger, backends ...string) (*SprayProxy, error) {
@@ -34,10 +36,18 @@ func NewSprayProxy(insecureTLS bool, logger *zap.Logger, backends ...string) (*S
 		return backends
 	}
 
+	// forwarding request timeout of 15s, can be overriden by SPRAYPROXY_FORWARDING_REQUEST_TIMEOUT env var
+	fwdReqTmout := 15 * time.Second
+	if duration, err := time.ParseDuration(os.Getenv("SPRAYPROXY_FORWARDING_REQUEST_TIMEOUT")); err == nil {
+		fwdReqTmout = duration
+	}
+	logger.Info(fmt.Sprintf("proxy forwarding request timeout set to %s", fwdReqTmout.String()))
+
 	return &SprayProxy{
 		backends:    backendFn,
 		insecureTLS: insecureTLS,
 		logger:      logger,
+		fwdReqTmout: fwdReqTmout,
 	}, nil
 }
 
@@ -63,7 +73,10 @@ func (p *SprayProxy) HandleProxy(c *gin.Context) {
 	}
 	body := buf.Bytes()
 
-	client := &http.Client{}
+	client := &http.Client{
+		// set forwarding request timeout
+		Timeout: p.fwdReqTmout,
+	}
 	if p.insecureTLS {
 		client.Transport = &http.Transport{
 			TLSClientConfig: &tls.Config{
@@ -140,7 +153,7 @@ func (p *SprayProxy) HandleProxy(c *gin.Context) {
 	}
 	if len(errors) > 0 {
 		// we have a bad gateway/connection somewhere
-		c.String(http.StatusBadGateway, "failed to proxy: %v", errors)
+		c.String(http.StatusBadGateway, "failed to proxy")
 		return
 	}
 	c.String(http.StatusOK, "proxied")
