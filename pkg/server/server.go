@@ -69,10 +69,10 @@ func NewServer(host string, port int, insecureSkipTLS bool, backends ...string) 
 // Run launches the proxy server with the pre-configured hostname and address.
 func (s *SprayProxyServer) Run() error {
 	address := fmt.Sprintf("%s:%d", s.host, s.port)
-	fmt.Printf("Running spray proxy on %s\n", address)
-	fmt.Printf("Forwarding traffic to %s\n", strings.Join(s.proxy.Backends(), ","))
+	zapLogger.Info(fmt.Sprintf("Running spray proxy on %s", address))
+	zapLogger.Info(fmt.Sprintf("Forwarding traffic to %s", strings.Join(s.proxy.Backends(), ",")))
 	if s.proxy.InsecureSkipTLSVerify() {
-		fmt.Printf("WARNING: Skipping TLS verification on backends.\n")
+		zapLogger.Warn("Skipping TLS verification on backends")
 	}
 	defer zapLogger.Sync()
 	return s.server.Run(address)
