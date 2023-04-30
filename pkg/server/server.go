@@ -42,8 +42,13 @@ func NewServer(host string, port int, insecureSkipTLS bool, backends ...string) 
 		return nil, err
 	}
 	// comment/uncomment to switch between debug and release mode
-	//gin.SetMode(gin.ReleaseMode)
+	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
+	// by default gin will trust all request headers that contain alternative client IP
+	// https://pkg.go.dev/github.com/gin-gonic/gin#Engine.SetTrustedProxies
+	r.SetTrustedProxies(nil)
+	// https://github.com/gin-gonic/gin/issues/3336#issuecomment-1272582870
+	r.TrustedPlatform = "X-Forwarded-For"
 	// set middleware before routes, otherwise it does not work (gin bug).
 	// The addRequestId middleware must be set before the logging middleware.
 	r.Use(addRequestId())
