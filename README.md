@@ -20,7 +20,9 @@ SPRAYPROXY_SERVER_BACKEND="http://localhost:8080 http://localhost:8081"
 ```
 
 * `SPRAYPROXY_SERVER_INSECURE_SKIP_TLS_VERIFY`: Skip TLS verification when forwarding to backends.
-  **Note: this setting is insecure and should not be used in production environments.**
+* `SPRAYPROXY_SERVER_INSECURE_SKIP_WEBHOOK_VERIFY`: Skip GitHub webhook verification for incoming requests.
+
+    **Note: those settings are insecure and should not be used in production environments.**
 
 Other configuration options:
 
