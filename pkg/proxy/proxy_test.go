@@ -71,7 +71,7 @@ func TestHandleProxy(t *testing.T) {
 	}
 	responseBody := w.Body.String()
 	if responseBody != "proxied" {
-		t.Errorf("expected repsonse %q, got %q", "proxied", responseBody)
+		t.Errorf("expected response %q, got %q", "proxied", responseBody)
 	}
 }
 
@@ -102,6 +102,43 @@ func TestHandleProxyMultiBackend(t *testing.T) {
 	}
 	if backend2.GetError() != nil {
 		t.Errorf("backend 2 error: %v", backend2.GetError())
+	}
+}
+
+func TestLargePayloadOnLimit(t *testing.T) {
+	proxy, err := NewSprayProxy(false, zap.NewNop())
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	w := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(w)
+	ctx.Request = httptest.NewRequest(http.MethodPost, "http://localhost:8080", bytes.NewBuffer(make([]byte, maxReqSize)))
+	proxy.HandleProxy(ctx)
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status code %d, got %d", http.StatusOK, w.Code)
+	}
+	responseBody := w.Body.String()
+	if responseBody != "proxied" {
+		t.Errorf("expected response %q, got %q", "proxied", responseBody)
+	}
+}
+
+func TestLargePayloadAboveLimit(t *testing.T) {
+	proxy, err := NewSprayProxy(false, zap.NewNop())
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	w := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(w)
+	ctx.Request = httptest.NewRequest(http.MethodPost, "http://localhost:8080", bytes.NewBuffer(make([]byte, maxReqSize+1)))
+	proxy.HandleProxy(ctx)
+	if w.Code != http.StatusRequestEntityTooLarge {
+		t.Errorf("expected status code %d, got %d", http.StatusRequestEntityTooLarge, w.Code)
+	}
+	expectedBody := "request body too large"
+	responseBody := w.Body.String()
+	if responseBody != expectedBody {
+		t.Errorf("expected response %q, got %q", expectedBody, responseBody)
 	}
 }
 

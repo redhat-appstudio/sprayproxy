@@ -22,6 +22,9 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+// GitHub webhook request max size is 25MB
+const maxReqSize = 1024 * 1024 * 25
+
 type BackendsFunc func() []string
 
 type SprayProxy struct {
@@ -64,11 +67,12 @@ func (p *SprayProxy) HandleProxy(c *gin.Context) {
 	}
 	// Read in body from incoming request
 	buf := &bytes.Buffer{}
-	_, err := buf.ReadFrom(c.Request.Body)
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxReqSize)
 	defer c.Request.Body.Close()
+	_, err := buf.ReadFrom(c.Request.Body)
 	if err != nil {
-		c.String(http.StatusRequestEntityTooLarge, "too large: %v", err)
-		p.logger.Error("request body too large", zapCommonFields...)
+		c.String(http.StatusRequestEntityTooLarge, "request body too large")
+		p.logger.Error(err.Error(), zapCommonFields...)
 		return
 	}
 	body := buf.Bytes()
