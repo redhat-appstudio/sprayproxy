@@ -12,8 +12,9 @@ import (
 )
 
 type testBackend struct {
-	server *httptest.Server
-	err    error
+	server  *httptest.Server
+	reqBody string
+	err     error
 }
 
 func (b *testBackend) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
@@ -25,6 +26,7 @@ func (b *testBackend) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		rw.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	b.reqBody = buf.String()
 	rw.WriteHeader(http.StatusOK)
 }
 
@@ -34,6 +36,10 @@ func (b *testBackend) GetServer() *httptest.Server {
 
 func (b *testBackend) GetError() error {
 	return b.err
+}
+
+func (b *testBackend) GetReqBody() string {
+	return b.reqBody
 }
 
 func NewTestServer() *testBackend {
