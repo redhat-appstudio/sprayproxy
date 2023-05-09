@@ -15,6 +15,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -75,6 +76,28 @@ func NewSprayProxy(insecureTLS, insecureWebhook bool, logger *zap.Logger, backen
 }
 
 func (p *SprayProxy) HandleProxy(c *gin.Context) {
+	handleProxyCommon(p, c)
+}
+
+func (p *SprayProxy) HandleProxyEndpoint(c *gin.Context) {
+	// if server post on non root endpoint e.g /proxy
+	// remove /proxy from the copied backend URL
+	c.Request.URL.Path = strings.TrimPrefix(c.Request.URL.Path, "/proxy")
+	handleProxyCommon(p, c)
+}
+
+func (p *SprayProxy) Backends() []string {
+	return p.backends()
+}
+
+// InsecureSkipTLSVerify indicates if the proxy is skipping TLS verification.
+// This setting is insecure and should not be used in production.
+func (p *SprayProxy) InsecureSkipTLSVerify() bool {
+	return p.insecureTLS
+}
+
+// handleProxyCommon handles the core proxying functionality
+func handleProxyCommon(p *SprayProxy, c *gin.Context) {
 	// currently not distinguishing between requests we can parse and those we cannot parse
 	metrics.IncInboundCount()
 	errors := []error{}
@@ -134,9 +157,10 @@ func (p *SprayProxy) HandleProxy(c *gin.Context) {
 		newURL := copy.Request.URL
 		newURL.Host = backendURL.Host
 		newURL.Scheme = backendURL.Scheme
+
 		// zap always append and does not override field entries, so we create
 		// per backend list of fields
-		zapBackendFields := append(zapCommonFields, zap.String("backend", newURL.Host))
+		zapBackendFields := append(zapCommonFields, zap.String("backend", newURL.String()))
 		newRequest, err := http.NewRequest(copy.Request.Method, newURL.String(), bytes.NewReader(body))
 		if err != nil {
 			p.logger.Error("failed to create request: "+err.Error(), zapBackendFields...)
@@ -196,16 +220,6 @@ func (p *SprayProxy) HandleProxy(c *gin.Context) {
 		return
 	}
 	c.String(http.StatusOK, "proxied")
-}
-
-func (p *SprayProxy) Backends() []string {
-	return p.backends()
-}
-
-// InsecureSkipTLSVerify indicates if the proxy is skipping TLS verification.
-// This setting is insecure and should not be used in production.
-func (p *SprayProxy) InsecureSkipTLSVerify() bool {
-	return p.insecureTLS
 }
 
 // doProxy proxies the provided request to a backend, with response data to an "empty" response instance.

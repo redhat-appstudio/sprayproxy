@@ -75,6 +75,16 @@ func TestServerAccessLog(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	w := httptest.NewRecorder()
+	t.Run("log 200 response for proxy endpoint health check", func(t *testing.T) {
+		buff.Reset()
+		req, _ := http.NewRequest(http.MethodGet, "/proxy", nil)
+		server.Handler().ServeHTTP(w, req)
+		expected := `"msg":"/proxy"`
+		log := buff.String()
+		if !strings.Contains(log, expected) {
+			t.Errorf("expected string %q did not appear in %q", expected, log)
+		}
+	})
 	t.Run("log 200 response", func(t *testing.T) {
 		buff.Reset()
 		req, _ := http.NewRequest(http.MethodGet, "/healthz", nil)
