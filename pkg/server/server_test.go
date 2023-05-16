@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -16,15 +17,27 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+// create GitHub webhook like HTTP request including signature
+func newProxyRequest() *http.Request {
+	form := url.Values{}
+	form.Add("payload", `{"foo":"bar"}`)
+	formBody := form.Encode()
+	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(formBody))
+	req.Header.Add("content-type", "application/x-www-form-urlencoded")
+	req.Header.Add("x-hub-signature-256", "sha256=c92b37ae0a1bcf9373c8b968d3c973891349b3fd993e23e6febc6a43dc7517fd")
+	return req
+}
+
 func TestServerRootPost(t *testing.T) {
 	// override default logger with a nop one
 	zapLogger = zap.NewNop()
-	server, err := NewServer("localhost", 8080, false)
+	t.Setenv("GH_APP_WEBHOOK_SECRET", "testSecret")
+	server, err := NewServer("localhost", 8080, false, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodPost, "/", bytes.NewBufferString("hello"))
+	req := newProxyRequest()
 	server.Handler().ServeHTTP(w, req)
 	if w.Code != http.StatusOK {
 		t.Errorf("expected status code %d, got %d", http.StatusOK, w.Code)
@@ -34,7 +47,7 @@ func TestServerRootPost(t *testing.T) {
 func TestServerHealthz(t *testing.T) {
 	// override default logger with a nop one
 	zapLogger = zap.NewNop()
-	server, err := NewServer("localhost", 8080, false)
+	server, err := NewServer("localhost", 8080, false, true)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -57,7 +70,7 @@ func TestServerAccessLog(t *testing.T) {
 	)
 	logger := zap.New(core)
 	zapLogger = logger
-	server, err := NewServer("localhost", 8080, false)
+	server, err := NewServer("localhost", 8080, false, true)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

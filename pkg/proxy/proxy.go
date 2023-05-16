@@ -8,6 +8,7 @@ package proxy
 import (
 	"bytes"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -22,21 +23,38 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// GitHub webhook request max size is 25MB
-const maxReqSize = 1024 * 1024 * 25
+const (
+	// GitHub webhook request max size is 25MB
+	maxReqSize = 1024 * 1024 * 25
+	// GitHub webhook validation secret
+	envWebhookSecret = "GH_APP_WEBHOOK_SECRET"
+)
 
 type BackendsFunc func() []string
 
 type SprayProxy struct {
-	backends    BackendsFunc
-	insecureTLS bool
-	logger      *zap.Logger
-	fwdReqTmout time.Duration
+	backends        BackendsFunc
+	insecureTLS     bool
+	insecureWebhook bool
+	webhookSecret   string
+	logger          *zap.Logger
+	fwdReqTmout     time.Duration
 }
 
-func NewSprayProxy(insecureTLS bool, logger *zap.Logger, backends ...string) (*SprayProxy, error) {
+func NewSprayProxy(insecureTLS, insecureWebhook bool, logger *zap.Logger, backends ...string) (*SprayProxy, error) {
 	backendFn := func() []string {
 		return backends
+	}
+
+	var webhookSecret string
+	if !insecureWebhook {
+		if secret := os.Getenv(envWebhookSecret); secret == "" {
+			// if validation is enabled, but no secret found
+			logger.Error("webhook validation enabled, but no secret found")
+			return nil, errors.New("no webhook secret")
+		} else {
+			webhookSecret = secret
+		}
 	}
 
 	// forwarding request timeout of 15s, can be overriden by SPRAYPROXY_FORWARDING_REQUEST_TIMEOUT env var
@@ -47,10 +65,12 @@ func NewSprayProxy(insecureTLS bool, logger *zap.Logger, backends ...string) (*S
 	logger.Info(fmt.Sprintf("proxy forwarding request timeout set to %s", fwdReqTmout.String()))
 
 	return &SprayProxy{
-		backends:    backendFn,
-		insecureTLS: insecureTLS,
-		logger:      logger,
-		fwdReqTmout: fwdReqTmout,
+		backends:        backendFn,
+		insecureTLS:     insecureTLS,
+		insecureWebhook: insecureWebhook,
+		webhookSecret:   webhookSecret,
+		logger:          logger,
+		fwdReqTmout:     fwdReqTmout,
 	}, nil
 }
 
@@ -63,10 +83,13 @@ func (p *SprayProxy) HandleProxy(c *gin.Context) {
 		zap.String("path", c.Request.URL.Path),
 		zap.String("query", c.Request.URL.RawQuery),
 		zap.Bool("insecure-tls", p.insecureTLS),
+		zap.Bool("insecure-webhook", p.insecureWebhook),
 		zap.String("request-id", c.GetString("requestId")),
 	}
-	// Read in body from incoming request
+
+	// Body from incoming request can only be read once, store it in a buf for re-use
 	buf := &bytes.Buffer{}
+	// Verify request size. If larger than limit, subsequent read will fail.
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxReqSize)
 	defer c.Request.Body.Close()
 	_, err := buf.ReadFrom(c.Request.Body)
@@ -76,6 +99,18 @@ func (p *SprayProxy) HandleProxy(c *gin.Context) {
 		return
 	}
 	body := buf.Bytes()
+
+	// validate incoming request
+	if !p.insecureWebhook {
+		// restore request body
+		c.Request.Body = io.NopCloser(bytes.NewReader(body))
+		if err := validateWebhookSignature(c.Request, p.webhookSecret); err != nil {
+			// we do not want to expose internal information, so returning generic failure message
+			c.String(http.StatusBadRequest, "bad request")
+			p.logger.Error(fmt.Sprintf("bad request: %v", err), zapCommonFields...)
+			return
+		}
+	}
 
 	client := &http.Client{
 		// set forwarding request timeout

@@ -35,9 +35,10 @@ sprayproxy server --backend http://localhost:8081 --backend http://localhost:808
 		metricsPort := viper.GetInt("metrics-port")
 		backends := viper.GetStringSlice("backend")
 		insecureSkipTLSVerify := viper.GetBool("insecure-skip-tls-verify")
+		insecureSkipWebhookVerify := viper.GetBool("insecure-skip-webhook-verify")
 		crtFile := viper.GetString("metrics-cert")
 		keyFile := viper.GetString("metrics-key")
-		server, err := server.NewServer(host, port, insecureSkipTLSVerify, backends...)
+		server, err := server.NewServer(host, port, insecureSkipTLSVerify, insecureSkipWebhookVerify, backends...)
 		if err != nil {
 			return err
 		}
@@ -55,6 +56,8 @@ sprayproxy server --backend http://localhost:8081 --backend http://localhost:808
 		metricsSrvr.StopServer()
 		return err
 	},
+	// don't show usage if RunE returns an error - see https://github.com/spf13/cobra/issues/340
+	SilenceUsage: true,
 }
 
 var (
@@ -88,6 +91,7 @@ func init() {
 	serverCmd.Flags().Int("port", 8080, "Port for running the server. Defaults to 8080")
 	serverCmd.Flags().StringSlice("backend", []string{}, "Backend to forward requests. Use more than once.")
 	serverCmd.Flags().Bool("insecure-skip-tls-verify", false, "Skip TLS verification on all backends. INSECURE - do not use in production.")
+	serverCmd.Flags().Bool("insecure-skip-webhook-verify", false, "Skip webhook payload verification. INSECURE - do not use in production.")
 	serverCmd.Flags().Int("metrics-port", metrics.MetricsPort, fmt.Sprintf("Port for the prometheus metrics endpoint.  Defaults to %d", metrics.MetricsPort))
 	serverCmd.Flags().String("metrics-cert", "", "TLS Certificate file for the prometheus metric endpoint.  Defaults to empty, meaning TLS will not be used")
 	serverCmd.Flags().String("metrics-key", "", "TLS Key file for the prometheus metric endpoint.  Defaults to empty, meaning TLS will not be used")
