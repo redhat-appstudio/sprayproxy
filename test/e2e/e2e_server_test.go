@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -53,5 +54,29 @@ func TestLogRequestId(t *testing.T) {
 	}
 	if line1["request-id"] != line2["request-id"] {
 		t.Errorf("request-id does not match: %s, %s", line1["request-id"], line2["request-id"])
+	}
+}
+
+// test original request body is matching the forwarded requests
+func TestBackendRequestBody(t *testing.T) {
+	backend1 := test.NewTestServer()
+	defer backend1.GetServer().Close()
+	backend2 := test.NewTestServer()
+	defer backend2.GetServer().Close()
+	server, err := server.NewServer("localhost", 8080, false, backend1.GetServer().URL, backend2.GetServer().URL)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	form := url.Values{}
+	form.Add("payload", `{"foo":"bar"}`)
+	reqBody := form.Encode()
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, "/", bytes.NewBufferString(reqBody))
+	server.Handler().ServeHTTP(w, req)
+	if reqBody != backend1.GetReqBody() {
+		t.Errorf("first backend, forwarded request does not match, want %q, got %q", reqBody, backend1.GetReqBody())
+	}
+	if reqBody != backend2.GetReqBody() {
+		t.Errorf("first backend, forwarded request does not match, want %q, got %q", reqBody, backend2.GetReqBody())
 	}
 }
