@@ -63,7 +63,7 @@ func TestBackendRequestBody(t *testing.T) {
 	defer backend1.GetServer().Close()
 	backend2 := test.NewTestServer()
 	defer backend2.GetServer().Close()
-	server, err := server.NewServer("localhost", 8080, false, backend1.GetServer().URL, backend2.GetServer().URL)
+	server, err := server.NewServer("localhost", 8080, false, true, backend1.GetServer().URL, backend2.GetServer().URL)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
