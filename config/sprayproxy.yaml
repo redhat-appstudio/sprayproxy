@@ -31,7 +31,7 @@ spec:
               name: server
           resources:
             limits:
-              memory: "128Mi"
+              memory: "384Mi"
               cpu: "500m"
         - name: kube-rbac-proxy
           image: registry.redhat.io/openshift4/ose-kube-rbac-proxy:v4.12
