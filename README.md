@@ -19,14 +19,17 @@ You can also configure the proxy with environment variables:
 SPRAYPROXY_SERVER_BACKEND="http://localhost:8080 http://localhost:8081"
 ```
 
+* `SPRAYPROXY_FORWARDING_REQUEST_TIMEOUT`: override the default forwarding request timeout. Default
+  is 15 seconds.
+* `GH_APP_WEBHOOK_SECRET`: webhook secret for GitHub apps. See the
+  [Github Apps guide](/docs/github-app.md) for more info.
+
+The following environment variables are insecure and should not be used in production environments:
+
 * `SPRAYPROXY_SERVER_INSECURE_SKIP_TLS_VERIFY`: Skip TLS verification when forwarding to backends.
-* `SPRAYPROXY_SERVER_INSECURE_SKIP_WEBHOOK_VERIFY`: Skip GitHub webhook verification for incoming requests.
+* `SPRAYPROXY_SERVER_INSECURE_SKIP_WEBHOOK_VERIFY`: Skip GitHub webhook verification for incoming
+  requests.
 
-    **Note: those settings are insecure and should not be used in production environments.**
-
-Other configuration options:
-
-* `SPRAYPROXY_FORWARDING_REQUEST_TIMEOUT`: override the default forwarding request timeout.
 
 ## Developing
 
