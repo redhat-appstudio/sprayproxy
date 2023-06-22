@@ -1,21 +1,23 @@
 package metrics
 
 import (
-	"github.com/prometheus/client_golang/prometheus"
 	"sync"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 const (
+	prefix        = "http"
 	separator     = "_"
 	requestsTotal = "requests_total"
 
 	subsystem = "sprayproxy"
 
-	inbound                   = "http" + separator + "inbound"
+	inbound                   = prefix + separator + "inbound"
 	inboundRequestsName       = subsystem + separator + inbound + separator + requestsTotal
-	forwarded                 = "htp" + separator + "forwarded"
+	forwarded                 = prefix + separator + "forwarded"
 	forwardedRequestsName     = subsystem + separator + forwarded + separator + requestsTotal
-	responseTime              = "http" + separator + "response" + separator + "time"
+	responseTime              = prefix + separator + "response" + separator + "time"
 	forwardedResponseTimeName = subsystem + separator + responseTime + separator + "duration_seconds"
 	hostLabel                 = "host"
 
