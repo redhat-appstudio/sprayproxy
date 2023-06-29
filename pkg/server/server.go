@@ -62,6 +62,8 @@ func NewServer(host string, port int, insecureSkipTLS, insecureSkipWebhookVerify
 	r.Use(ginzap.RecoveryWithZap(zapLogger, true))
 	r.GET("/", handleHealthz)
 	r.POST("/", sprayProxy.HandleProxy)
+	r.GET("/proxy", handleHealthz)
+	r.POST("/proxy", sprayProxy.HandleProxyEndpoint)
 	r.GET("/healthz", handleHealthz)
 	return &SprayProxyServer{
 		server: r,

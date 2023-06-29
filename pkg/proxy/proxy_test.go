@@ -80,6 +80,24 @@ func TestProxyWebhookSecret(t *testing.T) {
 	}
 }
 
+func TestHandleProxyEndpoint(t *testing.T) {
+	proxy, err := NewSprayProxy(false, true, zap.NewNop())
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	w := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(w)
+	ctx.Request = newProxyRequest()
+	proxy.HandleProxyEndpoint(ctx)
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status code %d, got %d", http.StatusOK, w.Code)
+	}
+	responseBody := w.Body.String()
+	if responseBody != "proxied" {
+		t.Errorf("expected response %q, got %q", "proxied", responseBody)
+	}
+}
+
 func TestHandleProxy(t *testing.T) {
 	proxy, err := NewSprayProxy(false, true, zap.NewNop())
 	if err != nil {
@@ -182,11 +200,30 @@ func TestProxyLog(t *testing.T) {
 	}
 	w := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(w)
-	ctx.Request = newProxyRequest()
-	proxy.HandleProxy(ctx)
-	expected := `"msg":"proxied request"`
-	log := buff.String()
-	if !strings.Contains(log, expected) {
-		t.Errorf("expected string %q did not appear in %q", expected, log)
-	}
+	t.Run("proxy log for root endpoint", func(t *testing.T) {
+		buff.Reset()
+		ctx.Request = newProxyRequest()
+		proxy.HandleProxy(ctx)
+		expected := `"msg":"proxied request"`
+		log := buff.String()
+		if !strings.Contains(log, expected) {
+			t.Errorf("expected string %q did not appear in %q", expected, log)
+		}
+	})
+	t.Run("proxy log for /proxy endpoint", func(t *testing.T) {
+		buff.Reset()
+		ctx.Request = httptest.NewRequest(http.MethodPost, "http://localhost:8080/proxy/apis", bytes.NewBuffer(make([]byte, maxReqSize)))
+		proxy.HandleProxyEndpoint(ctx)
+		expected := `"msg":"proxied request"`
+		unexpectedBackend := backend.GetServer().URL + "/proxy/apis"
+		log := buff.String()
+		if !strings.Contains(log, expected) {
+			t.Errorf("expected string %q did not appear in %q", expected, log)
+		}
+
+		if strings.Contains(log, unexpectedBackend) {
+			t.Errorf("proxy forwarded request to unexpected backend: %q, has /proxy path prefix", unexpectedBackend)
+		}
+	})
+
 }
