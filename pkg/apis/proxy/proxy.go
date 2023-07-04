@@ -161,7 +161,7 @@ func handleProxyCommon(p *SprayProxy, c *gin.Context) {
 
 		// zap always append and does not override field entries, so we create
 		// per backend list of fields
-		zapBackendFields := append(zapCommonFields, zap.String("backend", newURL.String()))
+		zapBackendFields := append(zapCommonFields, zap.String("backend", newURL.Host))
 		newRequest, err := http.NewRequest(copy.Request.Method, newURL.String(), bytes.NewReader(body))
 		if err != nil {
 			p.logger.Error("failed to create request: "+err.Error(), zapBackendFields...)
