@@ -19,6 +19,11 @@ spec:
         app.kubernetes.io/name: sprayproxy
     spec:
       serviceAccountName: sprayproxy
+      volumes:
+        - name: tls
+          secret:
+            secretName: sprayproxy-tls
+            defaultMode: 420
       containers:
         - name: sprayproxy
           image: ko://github.com/redhat-appstudio/sprayproxy
@@ -36,10 +41,35 @@ spec:
         - name: kube-rbac-proxy
           image: registry.redhat.io/openshift4/ose-kube-rbac-proxy:v4.12
           args:
+            - "--secure-listen-address=0.0.0.0:9443"
+            - "--upstream=http://127.0.0.1:8080/"
+            - "--ignore-paths=/proxy,/healthz"
+            - "--logtostderr=true"
+            - "--v=10"
+            - '--tls-cert-file=/etc/tls/tls.crt'
+            - '--tls-private-key-file=/etc/tls/tls.key'
+          ports:
+            - containerPort: 9443
+              protocol: TCP
+              name: proxy-https
+          volumeMounts:
+            - name: tls
+              readOnly: true
+              mountPath: /etc/tls
+          resources:
+            limits:
+              cpu: 500m
+              memory: 128Mi
+            requests:
+              cpu: 5m
+              memory: 64Mi
+        - name: kube-rbac-metrics
+          image: registry.redhat.io/openshift4/ose-kube-rbac-proxy:v4.12
+          args:
             - "--secure-listen-address=0.0.0.0:8443"
             - "--upstream=http://127.0.0.1:6000/"
             - "--logtostderr=true"
-            - "--v=0"
+            - "--v=10"
           ports:
             - containerPort: 8443
               protocol: TCP
@@ -57,13 +87,15 @@ kind: Service
 metadata:
   name: sprayproxy-service
   namespace: sprayproxy
+  annotations:
+    service.beta.openshift.io/serving-cert-secret-name: sprayproxy-tls
 spec:
   selector:
     app.kubernetes.io/name: sprayproxy
   ports:
-    - name: server
+    - name: proxy-https
       protocol: TCP
-      port: 8080
+      port: 9443
 ---
 apiVersion: v1
 kind: Service

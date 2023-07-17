@@ -10,7 +10,7 @@ metadata:
     haproxy.router.openshift.io/hsts_header: "max-age=63072000"
 spec:
   tls:
-    termination: edge
+    termination: reencrypt 
     insecureEdgeTerminationPolicy: Redirect
   to:
     kind: Service

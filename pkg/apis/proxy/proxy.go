@@ -31,21 +31,17 @@ const (
 	envWebhookSecret = "GH_APP_WEBHOOK_SECRET"
 )
 
-type BackendsFunc func() []string
-
 type SprayProxy struct {
-	backends        BackendsFunc
-	insecureTLS     bool
-	insecureWebhook bool
-	webhookSecret   string
-	logger          *zap.Logger
-	fwdReqTmout     time.Duration
+	backends              map[string]string
+	insecureTLS           bool
+	insecureWebhook       bool
+	enableDynamicBackends bool
+	webhookSecret         string
+	logger                *zap.Logger
+	fwdReqTmout           time.Duration
 }
 
-func NewSprayProxy(insecureTLS, insecureWebhook bool, logger *zap.Logger, backends ...string) (*SprayProxy, error) {
-	backendFn := func() []string {
-		return backends
-	}
+func NewSprayProxy(insecureTLS, insecureWebhook, enableDynamicBackends bool, logger *zap.Logger, backends map[string]string) (*SprayProxy, error) {
 
 	var webhookSecret string
 	if !insecureWebhook {
@@ -66,12 +62,13 @@ func NewSprayProxy(insecureTLS, insecureWebhook bool, logger *zap.Logger, backen
 	logger.Info(fmt.Sprintf("proxy forwarding request timeout set to %s", fwdReqTmout.String()))
 
 	return &SprayProxy{
-		backends:        backendFn,
-		insecureTLS:     insecureTLS,
-		insecureWebhook: insecureWebhook,
-		webhookSecret:   webhookSecret,
-		logger:          logger,
-		fwdReqTmout:     fwdReqTmout,
+		backends:              backends,
+		insecureTLS:           insecureTLS,
+		insecureWebhook:       insecureWebhook,
+		enableDynamicBackends: enableDynamicBackends,
+		webhookSecret:         webhookSecret,
+		logger:                logger,
+		fwdReqTmout:           fwdReqTmout,
 	}, nil
 }
 
@@ -87,7 +84,11 @@ func (p *SprayProxy) HandleProxyEndpoint(c *gin.Context) {
 }
 
 func (p *SprayProxy) Backends() []string {
-	return p.backends()
+	backends := []string{}
+	for b, _ := range p.backends {
+		backends = append(backends, b)
+	}
+	return backends
 }
 
 // InsecureSkipTLSVerify indicates if the proxy is skipping TLS verification.
@@ -147,7 +148,7 @@ func handleProxyCommon(p *SprayProxy, c *gin.Context) {
 		}
 	}
 
-	for _, backend := range p.backends() {
+	for backend, _ := range p.backends {
 		backendURL, err := url.Parse(backend)
 		if err != nil {
 			p.logger.Error("failed to parse backend "+err.Error(), zapCommonFields...)
