@@ -47,7 +47,7 @@ spec:
         taskSpec:
           steps:
             - name: unit-tests
-              image: registry.access.redhat.com/ubi9/go-toolset:1.18
+              image: registry.access.redhat.com/ubi9/go-toolset:1.19
               imagePullPolicy: Always
               script: |
                 #!/usr/bin/env bash

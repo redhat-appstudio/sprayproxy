@@ -893,6 +893,7 @@ func (e *Encoder) kMapCanonical(ti *typeInfo, rv, rvv reflect.Value, keyFn, valF
 				v := &mksbv[i]
 				l := len(mksv)
 
+				e.c = containerMapKey
 				e.encodeValue(k, nil)
 				e.atEndOfEncode()
 				e.w().end()
@@ -1325,7 +1326,7 @@ TOP:
 	}
 
 	if fn == nil {
-		fn = e.h.fn(rvType(rv))
+		fn = e.h.fn(rv.Type())
 	}
 
 	if !fn.i.addrE { // typically, addrE = false, so check it first
@@ -1346,7 +1347,7 @@ TOP:
 // OR non-nil values of kind map, slice and chan.
 func (e *Encoder) encodeValueNonNil(rv reflect.Value, fn *codecFn) {
 	if fn == nil {
-		fn = e.h.fn(rvType(rv))
+		fn = e.h.fn(rv.Type())
 	}
 
 	if fn.i.addrE { // typically, addrE = false, so check it first
