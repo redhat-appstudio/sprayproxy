@@ -31,6 +31,7 @@ spec:
             - server
           env:
             - name: SPRAYPROXY_SERVER_BACKEND
+            - name: GH_APP_WEBHOOK_SECRET
           ports:
             - containerPort: 8080
               name: server
@@ -41,7 +42,7 @@ spec:
         - name: kube-rbac-proxy
           image: registry.redhat.io/openshift4/ose-kube-rbac-proxy:v4.12
           args:
-            - "--secure-listen-address=0.0.0.0:9443"
+            - "--secure-listen-address=0.0.0.0:8443"
             - "--upstream=http://127.0.0.1:8080/"
             - "--ignore-paths=/proxy,/healthz"
             - "--logtostderr=true"
@@ -66,14 +67,14 @@ spec:
         - name: kube-rbac-metrics
           image: registry.redhat.io/openshift4/ose-kube-rbac-proxy:v4.12
           args:
-            - "--secure-listen-address=0.0.0.0:8443"
+            - "--secure-listen-address=0.0.0.0:9443"
             - "--upstream=http://127.0.0.1:6000/"
             - "--logtostderr=true"
             - "--v=10"
           ports:
-            - containerPort: 8443
+            - containerPort: 9443
               protocol: TCP
-              name: https
+              name: metrics
           resources:
             limits:
               cpu: 500m
@@ -85,28 +86,20 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: sprayproxy-service
-  namespace: sprayproxy
+  name: sprayproxy
+  labels:
+    app.kubernetes.io/name: sprayproxy
   annotations:
     service.beta.openshift.io/serving-cert-secret-name: sprayproxy-tls
 spec:
   selector:
     app.kubernetes.io/name: sprayproxy
   ports:
-    - name: proxy-https
-      protocol: TCP
-      port: 9443
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: sprayproxy-metrics-service
-  namespace: sprayproxy
-spec:
-  selector:
-    app.kubernetes.io/name: sprayproxy
-  ports:
-    - name: https
+    - name: server
       protocol: TCP
       port: 8443
-      targetPort: https
+      targetPort: server
+    - name: metrics
+      protocol: TCP
+      port: 9443
+      targetPort: metrics

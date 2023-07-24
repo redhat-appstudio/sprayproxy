@@ -3,6 +3,9 @@
 
 resources:
   - namespace.yaml
-  - service-account.yaml
   - sprayproxy.yaml
   - route.yaml # only for openshift deployments
+  - sprayproxy-rbac.yaml
+  - service-monitor.yaml
+
+namespace: sprayproxy

@@ -5,7 +5,6 @@ apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
   name: sprayproxy-route
-  namespace: sprayproxy
   annotations:
     haproxy.router.openshift.io/hsts_header: "max-age=63072000"
 spec:
@@ -14,4 +13,6 @@ spec:
     insecureEdgeTerminationPolicy: Redirect
   to:
     kind: Service
-    name: sprayproxy-service
+    name: sprayproxy
+  port:
+    targetPort: server

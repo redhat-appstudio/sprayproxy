@@ -1,0 +1,20 @@
+# Copyright © 2023 The Spray Proxy Contributors
+# SPDX-License-Identifier: Apache-2.0
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: sprayproxy
+spec:
+  endpoints:
+    - path: /metrics
+      port: metrics
+      scheme: https
+      bearerTokenSecret:
+        name: metrics-reader
+        key: token
+      tlsConfig:
+        insecureSkipVerify: true
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: sprayproxy
