@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -156,7 +157,7 @@ func TestLargePayloadOnLimit(t *testing.T) {
 	}
 	w := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(w)
-	ctx.Request = httptest.NewRequest(http.MethodPost, "http://localhost:8080", bytes.NewBuffer(make([]byte, maxReqSize)))
+	ctx.Request = httptest.NewRequest(http.MethodPost, "http://localhost:8080", bytes.NewBuffer(make([]byte, proxy.maxReqSize)))
 	proxy.HandleProxy(ctx)
 	if w.Code != http.StatusOK {
 		t.Errorf("expected status code %d, got %d", http.StatusOK, w.Code)
@@ -174,7 +175,7 @@ func TestLargePayloadAboveLimit(t *testing.T) {
 	}
 	w := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(w)
-	ctx.Request = httptest.NewRequest(http.MethodPost, "http://localhost:8080", bytes.NewBuffer(make([]byte, maxReqSize+1)))
+	ctx.Request = httptest.NewRequest(http.MethodPost, "http://localhost:8080", bytes.NewBuffer(make([]byte, proxy.maxReqSize+1)))
 	proxy.HandleProxy(ctx)
 	if w.Code != http.StatusRequestEntityTooLarge {
 		t.Errorf("expected status code %d, got %d", http.StatusRequestEntityTooLarge, w.Code)
@@ -183,6 +184,18 @@ func TestLargePayloadAboveLimit(t *testing.T) {
 	responseBody := w.Body.String()
 	if responseBody != expectedBody {
 		t.Errorf("expected response %q, got %q", expectedBody, responseBody)
+	}
+}
+
+func TestCustomPayload(t *testing.T) {
+	expected := 1024 * 1024 // 1MB
+	t.Setenv("SPRAYPROXY_MAX_REQUEST_SIZE", strconv.Itoa(expected))
+	proxy, err := NewSprayProxy(false, true, false, zap.NewNop(), nil)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if proxy.maxReqSize != expected {
+		t.Errorf("expected max request size %d, got %d", expected, proxy.maxReqSize)
 	}
 }
 
@@ -218,7 +231,7 @@ func TestProxyLog(t *testing.T) {
 	})
 	t.Run("proxy log for /proxy endpoint", func(t *testing.T) {
 		buff.Reset()
-		ctx.Request = httptest.NewRequest(http.MethodPost, "http://localhost:8080/proxy/apis", bytes.NewBuffer(make([]byte, maxReqSize)))
+		ctx.Request = httptest.NewRequest(http.MethodPost, "http://localhost:8080/proxy/apis", bytes.NewBuffer(make([]byte, proxy.maxReqSize)))
 		proxy.HandleProxyEndpoint(ctx)
 		expected := `"msg":"proxied request"`
 		unexpectedBackend := backend.GetServer().URL + "/proxy/apis"
