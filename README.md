@@ -21,6 +21,7 @@ SPRAYPROXY_SERVER_BACKEND="http://localhost:8080 http://localhost:8081"
 
 * `SPRAYPROXY_FORWARDING_REQUEST_TIMEOUT`: override the default forwarding request timeout. Default
   is 15 seconds.
+* `SPRAYPROXY_MAX_REQUEST_SIZE`: override the default maximum request size. In bytes. Default is 25MB.
 * `GH_APP_WEBHOOK_SECRET`: webhook secret for GitHub apps. See the
   [Github Apps guide](/docs/github-app.md) for more info.
 

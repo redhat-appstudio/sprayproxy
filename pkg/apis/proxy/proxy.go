@@ -15,6 +15,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -25,8 +26,6 @@ import (
 )
 
 const (
-	// GitHub webhook request max size is 25MB
-	maxReqSize = 1024 * 1024 * 25
 	// GitHub webhook validation secret
 	envWebhookSecret = "GH_APP_WEBHOOK_SECRET"
 )
@@ -39,6 +38,7 @@ type SprayProxy struct {
 	webhookSecret         string
 	logger                *zap.Logger
 	fwdReqTmout           time.Duration
+	maxReqSize            int
 }
 
 func NewSprayProxy(insecureTLS, insecureWebhook, enableDynamicBackends bool, logger *zap.Logger, backends map[string]string) (*SprayProxy, error) {
@@ -61,6 +61,13 @@ func NewSprayProxy(insecureTLS, insecureWebhook, enableDynamicBackends bool, log
 	}
 	logger.Info(fmt.Sprintf("proxy forwarding request timeout set to %s", fwdReqTmout.String()))
 
+	// GitHub limits webhook request size to 25MB. Use that as default.
+	maxReqSize := 1024 * 1024 * 25
+	if maxReqSizeFromEnv, err := strconv.Atoi(os.Getenv("SPRAYPROXY_MAX_REQUEST_SIZE")); err == nil {
+		maxReqSize = maxReqSizeFromEnv
+	}
+	logger.Info(fmt.Sprintf("proxy max request size set to %d bytes (%.2fMB)", maxReqSize, float64(maxReqSize)/(1<<20)))
+
 	return &SprayProxy{
 		backends:              backends,
 		insecureTLS:           insecureTLS,
@@ -69,6 +76,7 @@ func NewSprayProxy(insecureTLS, insecureWebhook, enableDynamicBackends bool, log
 		webhookSecret:         webhookSecret,
 		logger:                logger,
 		fwdReqTmout:           fwdReqTmout,
+		maxReqSize:            maxReqSize,
 	}, nil
 }
 
@@ -114,7 +122,7 @@ func handleProxyCommon(p *SprayProxy, c *gin.Context) {
 	// Body from incoming request can only be read once, store it in a buf for re-use
 	buf := &bytes.Buffer{}
 	// Verify request size. If larger than limit, subsequent read will fail.
-	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxReqSize)
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, int64(p.maxReqSize))
 	defer c.Request.Body.Close()
 	_, err := buf.ReadFrom(c.Request.Body)
 	if err != nil {
