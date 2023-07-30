@@ -46,13 +46,13 @@ spec:
             - "--upstream=http://127.0.0.1:8080/"
             - "--ignore-paths=/proxy,/healthz"
             - "--logtostderr=true"
-            - "--v=10"
+            - "--v=4"
             - '--tls-cert-file=/etc/tls/tls.crt'
             - '--tls-private-key-file=/etc/tls/tls.key'
           ports:
-            - containerPort: 9443
+            - containerPort: 8443
               protocol: TCP
-              name: proxy-https
+              name: proxy
           volumeMounts:
             - name: tls
               readOnly: true
@@ -70,7 +70,7 @@ spec:
             - "--secure-listen-address=0.0.0.0:9443"
             - "--upstream=http://127.0.0.1:6000/"
             - "--logtostderr=true"
-            - "--v=10"
+            - "--v=4"
           ports:
             - containerPort: 9443
               protocol: TCP
@@ -95,11 +95,24 @@ spec:
   selector:
     app.kubernetes.io/name: sprayproxy
   ports:
-    - name: server
+    - name: proxy
       protocol: TCP
       port: 8443
-      targetPort: server
+      targetPort: proxy
+---
+# Two separate services are created as workaround for OCPBUGS-5916
+kind: Service
+apiVersion: v1
+metadata:
+  name: metrics
+  labels:
+    app.kubernetes.io/name: metrics
+    app.kubernetes.io/part-of: sprayproxy
+spec:
+  ports:
     - name: metrics
       protocol: TCP
       port: 9443
       targetPort: metrics
+  selector:
+    app.kubernetes.io/name: sprayproxy

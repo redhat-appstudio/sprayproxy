@@ -17,4 +17,5 @@ spec:
         insecureSkipVerify: true
   selector:
     matchLabels:
-      app.kubernetes.io/name: sprayproxy
+      app.kubernetes.io/name: metrics
+      app.kubernetes.io/part-of: sprayproxy

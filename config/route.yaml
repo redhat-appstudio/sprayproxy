@@ -15,4 +15,4 @@ spec:
     kind: Service
     name: sprayproxy
   port:
-    targetPort: server
+    targetPort: proxy
