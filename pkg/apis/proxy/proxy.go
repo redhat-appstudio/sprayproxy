@@ -157,6 +157,7 @@ func handleProxyCommon(p *SprayProxy, c *gin.Context) {
 	}
 
 	for backend, _ := range p.backends {
+		fwdErr := ""
 		backendURL, err := url.Parse(backend)
 		if err != nil {
 			p.logger.Error("failed to parse backend "+err.Error(), zapCommonFields...)
@@ -177,17 +178,16 @@ func handleProxyCommon(p *SprayProxy, c *gin.Context) {
 			continue
 		}
 		newRequest.Header = copy.Request.Header
-		// currently not distinguishing between requests we send and requests that return without error
-		metrics.IncForwardedCount(backendURL.Host)
 
 		// for response time, we are making it "simpler" and including everything in the client.Do call
 		start := time.Now()
 		resp, err := client.Do(newRequest)
 		responseTime := time.Now().Sub(start)
-		metrics.AddForwardedResponseTime(responseTime.Seconds())
 		// standartize on what ginzap logs
 		zapBackendFields = append(zapBackendFields, zap.Duration("latency", responseTime))
 		if err != nil {
+			fwdErr = "non-http-error"
+			metrics.IncForwardedCount(backendURL.Host, fwdErr)
 			p.logger.Error("proxy error: "+err.Error(), zapBackendFields...)
 			errors = append(errors, err)
 			continue
@@ -196,6 +196,7 @@ func handleProxyCommon(p *SprayProxy, c *gin.Context) {
 		zapBackendFields = append(zapBackendFields, zap.Int("status", resp.StatusCode))
 		p.logger.Info("proxied request", zapBackendFields...)
 		if resp.StatusCode >= 400 {
+			fwdErr = "http-error"
 			respBody, err := io.ReadAll(resp.Body)
 			if err != nil {
 				p.logger.Info("failed to read response: "+err.Error(), zapBackendFields...)
@@ -203,6 +204,8 @@ func handleProxyCommon(p *SprayProxy, c *gin.Context) {
 				p.logger.Info("response body: "+string(respBody), zapBackendFields...)
 			}
 		}
+		metrics.IncForwardedCount(backendURL.Host, fwdErr)
+		metrics.AddForwardedResponseTime(responseTime.Seconds())
 
 		// // Create a new request with a disconnected context
 		// newRequest := copy.Request.Clone(context.Background())

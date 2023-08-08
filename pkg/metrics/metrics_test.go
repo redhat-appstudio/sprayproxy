@@ -38,7 +38,7 @@ func TestMetrics(t *testing.T) {
 				`# TYPE ` + inboundRequestsName + ` counter`,
 				inboundRequestsName + ` 1`,
 				`# TYPE ` + forwardedRequestsName + ` counter`,
-				forwardedRequestsName + `{host="host1"} 2`,
+				forwardedRequestsName + `{error="none",host="host1"} 2`,
 				`# TYPE ` + forwardedResponseTimeName + ` histogram`,
 				forwardedResponseTimeName + `_sum 50`,
 				forwardedResponseTimeName + `_count 1`,
@@ -71,7 +71,7 @@ func TestMetrics(t *testing.T) {
 			IncInboundCount()
 		}
 		for i := 0; i < test.forwards; i += 1 {
-			IncForwardedCount("host1")
+			IncForwardedCount("host1", "")
 		}
 		if test.responseTime > 0 {
 			AddForwardedResponseTime(test.responseTime)
