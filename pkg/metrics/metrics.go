@@ -21,7 +21,7 @@ const (
 	forwardedResponseTimeName = subsystem + separator + responseTime + separator + "duration_seconds"
 	hostLabel                 = "host"
 
-	MetricsPort = 6000
+	MetricsPort = 9090
 )
 
 var (
