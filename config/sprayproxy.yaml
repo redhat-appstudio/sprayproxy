@@ -68,7 +68,7 @@ spec:
           image: registry.redhat.io/openshift4/ose-kube-rbac-proxy:v4.12
           args:
             - "--secure-listen-address=0.0.0.0:9443"
-            - "--upstream=http://127.0.0.1:6000/"
+            - "--upstream=http://127.0.0.1:9090/"
             - "--logtostderr=true"
             - "--v=4"
           ports:
