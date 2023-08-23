@@ -20,6 +20,7 @@ const (
 	responseTime              = prefix + separator + "response" + separator + "time"
 	forwardedResponseTimeName = subsystem + separator + responseTime + separator + "duration_seconds"
 	hostLabel                 = "host"
+	errorLabel                = "error"
 
 	MetricsPort = 9090
 )
@@ -55,7 +56,7 @@ func createMetrics() []prometheus.Collector {
 		Name: forwardedRequestsName,
 		Help: "Counts forwarded attempts to backend server(s).",
 	},
-		[]string{hostLabel})
+		[]string{hostLabel, errorLabel})
 	responseTimes = prometheus.NewHistogram(prometheus.HistogramOpts{
 		Name: forwardedResponseTimeName,
 		Help: "Forwarded request duration in seconds.",
@@ -75,9 +76,12 @@ func IncInboundCount() {
 	}
 }
 
-func IncForwardedCount(hostname string) {
+func IncForwardedCount(hostname, fwdErr string) {
 	if forwardedRequests != nil {
-		forwardedRequests.With(prometheus.Labels{hostLabel: hostname}).Inc()
+		if fwdErr == "" {
+			fwdErr = "none"
+		}
+		forwardedRequests.With(prometheus.Labels{hostLabel: hostname, errorLabel: fwdErr}).Inc()
 	}
 }
 

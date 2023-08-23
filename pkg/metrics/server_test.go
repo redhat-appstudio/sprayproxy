@@ -216,7 +216,7 @@ func TestMetricQueries(t *testing.T) {
 			IncInboundCount()
 		}
 		for i := 0; i < test.forwards; i += 1 {
-			IncForwardedCount("host")
+			IncForwardedCount("host", "")
 		}
 
 		port, ch := runMetricsServer(t)
