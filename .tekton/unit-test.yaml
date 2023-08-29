@@ -4,6 +4,7 @@ kind: PipelineRun
 metadata:
   name: sprayproxy-unit-test-on-pull-request
   annotations:
+    pipelinesascode.tekton.dev/task: "codecov"
     pipelinesascode.tekton.dev/on-event: "[pull_request]"
     pipelinesascode.tekton.dev/on-target-branch: "[main]"
     pipelinesascode.tekton.dev/max-keep-runs: "5"
@@ -52,9 +53,22 @@ spec:
               script: |
                 #!/usr/bin/env bash
                 cd $(workspaces.source.path)
-                go test ./...
+                go test ./... -race -coverprofile=coverage.out -covermode=atomic
           workspaces:
             - name: source
+      - name: codecov
+        runAfter:
+          - unit-tests
+        taskRef:
+          name: codecov
+        params:
+          - name: codecov-token-secret
+            value: "plnsvc-codecov-secret"
+          - name: codecov-token-secret-key
+            value: "sprayproxy"
+        workspaces:
+          - name: source
+            workspace: source
   workspaces:
     - name: source
       volumeClaimTemplate:
