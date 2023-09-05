@@ -37,8 +37,13 @@ spec:
               name: server
           resources:
             limits:
-              memory: "384Mi"
-              cpu: "500m"
+              cpu: 500m
+              memory: 384Mi
+            requests:
+              cpu: 5m
+              memory: 64Mi
+          securityContext:
+            readOnlyRootFilesystem: true
         - name: kube-rbac-proxy
           image: registry.redhat.io/openshift4/ose-kube-rbac-proxy:v4.12
           args:
@@ -64,6 +69,8 @@ spec:
             requests:
               cpu: 5m
               memory: 64Mi
+          securityContext:
+            readOnlyRootFilesystem: true
         - name: kube-rbac-metrics
           image: registry.redhat.io/openshift4/ose-kube-rbac-proxy:v4.12
           args:
@@ -82,6 +89,10 @@ spec:
             requests:
               cpu: 5m
               memory: 64Mi
+          securityContext:
+            readOnlyRootFilesystem: true
+      securityContext:
+        runAsNonRoot: true
 ---
 apiVersion: v1
 kind: Service
