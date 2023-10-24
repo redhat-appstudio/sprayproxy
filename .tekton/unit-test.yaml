@@ -53,6 +53,7 @@ spec:
               script: |
                 #!/usr/bin/env bash
                 cd $(workspaces.source.path)
+                cd source
                 go test ./... -race -coverprofile=coverage.out -covermode=atomic
           workspaces:
             - name: source
@@ -69,6 +70,7 @@ spec:
         workspaces:
           - name: source
             workspace: source
+            subPath: source
   workspaces:
     - name: source
       volumeClaimTemplate:

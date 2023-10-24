@@ -8,14 +8,19 @@ package server
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	utilnet "k8s.io/apimachinery/pkg/util/net"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 // create GitHub webhook like HTTP request including signature
@@ -58,6 +63,64 @@ func TestServerHealthz(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Errorf("expected status code %d, got %d", http.StatusOK, w.Code)
 	}
+}
+
+func TestServerGracefulShutdown(t *testing.T) {
+	zapLogger = zap.NewNop()
+	port := 8080
+	server, err := NewServer("localhost", port, false, true, false, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	r := gin.New()
+	// create a slow handler, so we can signal shutdown while query is handled
+	r.GET("/", func(c *gin.Context) {
+		time.Sleep(time.Second * 2)
+		c.String(http.StatusOK, "foo")
+	})
+	server.router = r
+	stopCh := make(chan struct{})
+	go server.Run(stopCh)
+
+	if err := blockUntilServerStarted(port); err != nil {
+		t.Fatalf("error while waiting for server: %v", err)
+	}
+
+	respCh := make(chan *http.Response, 1)
+	go func() {
+		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/", port))
+		if err != nil {
+			t.Fatalf("error making client request: %v", err)
+		}
+		respCh <- resp
+	}()
+	// Allow client to perform query before we signal shutdown. Must be shorter than
+	// the sleep in handler, so server shutdown is initiated while handling a request.
+	time.Sleep(time.Second)
+	close(stopCh)
+	resp := <-respCh
+	if (*resp).StatusCode != http.StatusOK {
+		t.Errorf("expected status code %d, got %d", http.StatusOK, (*resp).StatusCode)
+	}
+}
+
+func blockUntilServerStarted(port int) error {
+	return wait.PollImmediate(100*time.Millisecond, 5*time.Second, func() (bool, error) {
+		if _, err := http.Get(fmt.Sprintf("http://localhost:%d/", port)); err != nil {
+			// in case error is "connection refused", server is not up (yet)
+			// it is possible that it is still being started
+			// in that case we need to try more
+			if utilnet.IsConnectionRefused(err) {
+				return false, nil
+			}
+
+			// in case of a different error, return immediately
+			return true, err
+		}
+
+		// no error, stop polling the server, continue with the test logic
+		return true, nil
+	})
 }
 
 func TestGetRegisteredServer(t *testing.T) {

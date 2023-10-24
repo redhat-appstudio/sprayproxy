@@ -58,7 +58,8 @@ sprayproxy server --backend http://localhost:8081 --backend http://localhost:808
 		go func() {
 			metricsSrvr.RunServer(stopCh)
 		}()
-		err = server.Run()
+		// blocks until stopCh is closed
+		server.Run(stopCh)
 		metricsSrvr.StopServer()
 		return err
 	},
