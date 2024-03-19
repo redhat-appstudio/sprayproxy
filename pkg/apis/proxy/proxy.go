@@ -166,6 +166,7 @@ func handleProxyCommon(p *SprayProxy, c *gin.Context) {
 		copy := c.Copy()
 		newURL := copy.Request.URL
 		newURL.Host = backendURL.Host
+		newURL.Path = backendURL.Path
 		newURL.Scheme = backendURL.Scheme
 
 		// zap always append and does not override field entries, so we create
